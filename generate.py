@@ -1,32 +1,154 @@
 import math
 import random
+from enum import Enum, auto
 from itertools import combinations
 
 # Optional visualization libraries
 try:
-    import networkx as nx
     import matplotlib.pyplot as plt
+    import networkx as nx
     HAS_VIS = True
 except ImportError:
     HAS_VIS = False
 
 
+class NodeType(Enum):
+    START = auto()
+    NEUTRAL = auto()
+    TREASURE = auto()
+    SUPER_TREASURE = auto()
+    JUNCTION = auto()
+
+def random_bool(chance):
+    """Return True with given probability (0.0–1.0)."""
+    return random.random() < chance
+
+def random_choice_weighted(options):
+    """Random weighted choice: expects list of (value, probability)."""
+    r = random.random()
+    cumulative = 0
+    for value, prob in options:
+        cumulative += prob
+        if r <= cumulative:
+            return value
+    return options[-1][0]  # fallback
+
+ZONE_CONFIG = {
+    NodeType.START: {
+        "zone_type": lambda: 1,
+        "zone_size": lambda: random.randint(15, 40),
+        "res_parameter1": 1,
+        "res_parameter2": 8,
+        "res_parameter3": 2,
+        "res_parameter4": 8,
+        "player_control": lambda node: node.owner or 0,  # owner number or 0
+        "player_towns_min": 0,
+        "player_castles_min": 1,
+        "player_towns_density": 0,
+        "player_castles_density": 0,
+
+        "neutral_towns_min": lambda: 1 if random_bool(0.2) else 0,
+        "neutral_castle_min": lambda node: 0 if node.attributes.get("neutral_towns_min", 0) > 0 else 0,
+        "neutral_towns_density": 0,
+        "neutral_castle_density": 0,
+
+        "all_castle_same": lambda: random.choice([0, 1]),  # 50/50
+        **{f"allowed_castle_{i}": 1 for i in range(1, 12)}
+    },
+    NodeType.NEUTRAL: {
+        "zone_type": lambda: 3,  # neutral = junction
+        "zone_size": lambda: random.randint(15, 40),
+        "res_parameter1": 1,
+        "res_parameter2": 8,
+        "res_parameter3": 2,
+        "res_parameter4": 8,
+        "player_control": lambda node: 0,
+
+        "player_towns_min": 0,
+        "player_castles_min": 0,
+        "player_towns_density": 0,
+        "player_castles_density": 0,
+
+        "neutral_towns_min": lambda: 1 if random_bool(0.2) else 0,
+        "neutral_castle_min": lambda node: (
+            0 if node.attributes.get("neutral_towns_min", 0) > 0
+            else random_choice_weighted([(1, 0.1), (0, 0.9)])
+        ),
+        "neutral_towns_density": 0,
+        "neutral_castle_density": 0,
+
+        "all_castle_same": lambda: random.choice([0, 1]),
+        **{f"allowed_castle_{i}": 1 for i in range(1, 12)}
+    },
+    NodeType.TREASURE: {
+        "zone_type": lambda: 2,
+        "zone_size": lambda: random.randint(15, 40),
+        "res_parameter1": 1,
+        "res_parameter2": 8,
+        "res_parameter3": 2,
+        "res_parameter4": 8,
+        "player_control": lambda node: 0,
+
+        "player_towns_min": 0,
+        "player_castles_min": 0,
+        "player_towns_density": 0,
+        "player_castles_density": 0,
+
+        "neutral_towns_min": lambda: random_choice_weighted([(2, 0.1), (1, 0.3), (0, 0.6)]),
+        "neutral_castle_min": lambda node: (
+            0 if node.attributes.get("neutral_towns_min", 0) > 0
+            else random_choice_weighted([(1, 0.2), (0, 0.8)])
+        ),
+        "neutral_towns_density": 0,
+        "neutral_castle_density": 0,
+
+        "all_castle_same": lambda: random.choice([0, 1]),
+        **{f"allowed_castle_{i}": 1 for i in range(1, 12)}
+    },
+    NodeType.SUPER_TREASURE: {
+        "zone_type": lambda: 2,  # same zone_type as normal treasure
+        "zone_size": lambda: random.randint(20, 40),
+        "res_parameter1": 1,
+        "res_parameter2": 8,
+        "res_parameter3": 2,
+        "res_parameter4": 8,
+        "player_control": lambda node: 0,
+
+        "player_towns_min": 0,
+        "player_castles_min": 0,
+        "player_towns_density": 0,
+        "player_castles_density": 0,
+
+        "neutral_towns_min": lambda: random_choice_weighted([(2, 0.1), (1, 0.3), (0, 0.6)]),
+        "neutral_castle_min": lambda node: (
+            0 if node.attributes.get("neutral_towns_min", 0) > 0
+            else random_choice_weighted([(2, 0.1), (1, 0.2), (0, 0.7)])
+        ),
+        "neutral_towns_density": 0,
+        "neutral_castle_density": 0,
+
+        "all_castle_same": lambda: random.choice([0, 1]),
+        **{f"allowed_castle_{i}": 1 for i in range(1, 12)}
+    }
+}
+
 class Node:
-    def __init__(self, node_id, is_start=False, owner=None):
+    def __init__(self, node_id, node_type=None, owner=None, is_start=False):
         self.id = node_id
-        self.links = []  # list of Link objects
+        self.node_type = node_type
+        self.owner = owner
         self.is_start = is_start
-        self.owner = owner  # player ID or None for neutral
+        self.links = []
+        self.attributes = {}  # all generated values live here
 
     def add_link(self, link):
         if link not in self.links:
             self.links.append(link)
 
     def __repr__(self):
-        tag = " (Start)" if self.is_start else ""
-        owner = f" [P{self.owner}]" if self.owner else ""
-        return f"Node({self.id}{owner}{tag})"
-
+        type_name = self.node_type.name if self.node_type else "?"
+        owner = f"[P{self.owner}]" if self.owner else ""
+        return f"Node({self.id}, {type_name}{owner}{' (Start)' if self.is_start else ''})"
 
 class Link:
     def __init__(self, node_a, node_b):
@@ -72,8 +194,21 @@ class Graph:
         for node in self.nodes:
             connected_ids = [l.connects(node).id for l in node.links]
             start_flag = " (Start)" if node.is_start else ""
-            owner = f" [P{node.owner}]" if node.owner else ""
-            print(f"Node {node.id}{owner}{start_flag}: connected to {connected_ids}")
+            owner = f" [Player{node.owner}]" if node.owner else ""
+            zone_type = f" {node.node_type}"
+            attributes = node.attributes
+            print(f"Node {node.id}{owner}{start_flag}{zone_type}: connected to {connected_ids}. Attributes:\n {attributes}")
+
+def assign_zone_attributes(node):
+    config = ZONE_CONFIG.get(node.node_type, {})
+    for key, value in config.items():
+        if callable(value):
+            try:
+                node.attributes[key] = value(node)
+            except TypeError:
+                node.attributes[key] = value()
+        else:
+            node.attributes[key] = value
 
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
@@ -121,40 +256,84 @@ def generate_world(num_players=3,
     # Generate main graph
     num_main_nodes = random.randint(*main_zone_nodes)
     main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
+    
+    for node in main_graph.nodes:
+        # neutral world nodes
+        roll = random.random()
+        if roll < 0.1:
+            node.node_type = NodeType.JUNCTION
+        elif roll < 0.4:
+            node.node_type = NodeType.NEUTRAL
+        elif roll < 0.8:
+            node.node_type = NodeType.TREASURE
+        else:
+            node.node_type = NodeType.SUPER_TREASURE
+        assign_zone_attributes(node)
+
     current_id += num_main_nodes
 
-    # Generate player areas (identical structure for all)
+    # Generate player areas (identical structure, node types, and attributes for all)
     player_graphs = []
     num_nodes = random.randint(*player_zone_nodes)
 
-    # Create one "template" player zone
+    # ──────────────────────────────
+    # STEP 1: Generate template zone (first player)
+    # ──────────────────────────────
     template_graph = generate_subgraph(
         num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
     )
 
-    # Deep-copy the structure for each player with new node IDs
+    # Assign node types & generate attributes for template
+    for node in template_graph.nodes:
+        if node.is_start:
+            node.node_type = NodeType.START
+        else:
+            roll = random.random()
+            if roll < 0.7:
+                node.node_type = NodeType.NEUTRAL
+            elif roll < 0.9:
+                node.node_type = NodeType.TREASURE
+            else:
+                node.node_type = NodeType.SUPER_TREASURE
+        assign_zone_attributes(node)
+
+    # Add logic to ensure specific castle is same type as players castle
+
+    # ──────────────────────────────
+    # STEP 2: Clone template for each player
+    # ──────────────────────────────
     for p in range(1, num_players + 1):
-        # Create node copies with new IDs
         nodes_map = {}
         copied_nodes = []
+
         for n in template_graph.nodes:
-            new_node = Node(current_id, is_start=n.is_start, owner=p)
+            new_node = Node(
+                current_id,
+                node_type=n.node_type,
+                owner=p,
+                is_start=n.is_start
+            )
+            # Deep copy all generated attributes
+            new_node.attributes = dict(n.attributes)
+            if new_node.node_type == NodeType.START:
+                new_node.attributes["player_control"] = new_node.owner
+
             nodes_map[n.id] = new_node
             copied_nodes.append(new_node)
             current_id += 1
 
-        # Build graph
         g = Graph()
         for n in copied_nodes:
             g.add_node(n)
 
-        # Recreate links using mapped nodes
+        # Recreate links using the ID map
         for l in template_graph.links:
             a = nodes_map[l.node_a.id]
             b = nodes_map[l.node_b.id]
             g.add_link(a, b)
 
         player_graphs.append(g)
+
 
     # Merge everything and connect player areas to main graph
     world = Graph()
@@ -223,8 +402,8 @@ def _inflate_polygon(poly, amount=0.05):
 # ───────────────────────────────────────────────
 def visualize_graph(world):
     try:
-        import networkx as nx
         import matplotlib.pyplot as plt
+        import networkx as nx
     except ImportError:
         print("Visualization libraries (networkx/matplotlib) not installed.")
         return
@@ -307,7 +486,7 @@ def visualize_graph(world):
 if __name__ == "__main__":
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
-    world = generate_world(num_players=6)
+    world = generate_world(num_players=3)
     world.display()
 
     visualize_graph(world)
