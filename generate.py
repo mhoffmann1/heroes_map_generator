@@ -33,6 +33,16 @@ def random_choice_weighted(options):
             return value
     return options[-1][0]  # fallback
 
+def pick_random_subset(options, chance_per_item, max_total=None):
+    """Return dict of {option: 0 or 1} with chance per item, optionally limited by max_total."""
+    chosen = []
+    for o in options:
+        if random.random() < chance_per_item:
+            chosen.append(o)
+    if max_total and len(chosen) > max_total:
+        chosen = random.sample(chosen, max_total)
+    return {o: 1 if o in chosen else 0 for o in options}
+
 ZONE_CONFIG = {
     NodeType.START: {
         "zone_type": lambda: 1,
@@ -199,6 +209,86 @@ class Graph:
             attributes = node.attributes
             print(f"Node {node.id}{owner}{start_flag}{zone_type}: connected to {connected_ids}. Attributes:\n {attributes}")
 
+RESOURCE_NAMES = ["wood", "mercury", "ore", "sulfur", "crystals", "gems", "gold"]
+
+def resource_logic(node):
+    """Generates *_min and *_density attributes for a given node."""
+    res = {}
+
+    # Default all to 0
+    for r in RESOURCE_NAMES:
+        res[f"{r}_min"] = 0
+        res[f"{r}_density"] = 0
+
+    nt = node.attributes.get("neutral_towns_min", 0)
+    nc = node.attributes.get("neutral_castle_min", 0)
+
+    # --- START zones ---
+    if node.node_type == NodeType.START:
+        res["wood_min"] = 1
+        res["ore_min"] = 1
+        # 10% chance that exactly one special resource is 1
+        if random_bool(0.1):
+            special = random.choice(["mercury", "sulfur", "crystals", "gems"])
+            res[f"{special}_min"] = 1
+
+    # --- NEUTRAL zones ---
+    elif node.node_type == NodeType.NEUTRAL:
+        # Adjust wood/ore based on towns/castles
+        if nc > 0:
+            res["wood_min"] = res["ore_min"] = 1
+        elif nt > 0:
+            if random_bool(0.5):
+                res["wood_min"] = res["ore_min"] = 1
+        # 25% chance one of the rare resources is 1
+        if random_bool(0.25):
+            special = random.choice(["mercury", "sulfur", "crystals", "gems"])
+            res[f"{special}_min"] = 1
+        # gold 5%
+        if random_bool(0.05):
+            res["gold_min"] = 1
+
+    # --- TREASURE zones ---
+    elif node.node_type == NodeType.TREASURE:
+        # wood/ore rules depend on towns/castles
+        if nc > 0:
+            res["wood_min"] = res["ore_min"] = 1
+        elif nt > 0:
+            if random_bool(0.5):
+                res["wood_min"] = res["ore_min"] = 1
+        # Each rare has 20% chance, max 2 total
+        subset = pick_random_subset(["mercury", "sulfur", "crystals", "gems"], 0.2, max_total=2)
+        for k, v in subset.items():
+            res[f"{k}_min"] = v
+        # gold 10%
+        if random_bool(0.10):
+            res["gold_min"] = 1
+
+    # --- SUPER TREASURE zones ---
+    elif node.node_type == NodeType.SUPER_TREASURE:
+        if nc > 0:
+            res["wood_min"] = res["ore_min"] = 1
+        elif nt > 0:
+            if random_bool(0.5):
+                res["wood_min"] = res["ore_min"] = 1
+        # Each rare 25%, no limit
+        subset = pick_random_subset(["mercury", "sulfur", "crystals", "gems"], 0.25)
+        for k, v in subset.items():
+            res[f"{k}_min"] = v
+        # gold 20%
+        if random_bool(0.20):
+            res["gold_min"] = 1
+
+    # --- Junction / others (no resources) ---
+    elif node.node_type == NodeType.JUNCTION:
+        for r in ["mercury", "sulfur", "crystals", "gems", "gold"]:
+            if random_bool(0.1):
+                res[f"{r}_min"] = 1    
+    else:
+        pass
+
+    return res
+
 def assign_zone_attributes(node):
     config = ZONE_CONFIG.get(node.node_type, {})
     for key, value in config.items():
@@ -210,6 +300,7 @@ def assign_zone_attributes(node):
         else:
             node.attributes[key] = value
 
+    node.attributes.update(resource_logic(node))
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
     """Generate a connected subgraph with controlled link randomness."""
@@ -339,6 +430,8 @@ def generate_world(num_players=3,
     world = Graph()
     world.merge(main_graph)
 
+
+#Fixup! the same node/s should be connected to main map for each player zone
     for player_graph in player_graphs:
         # Choose one node in player's area as connection node
         connection_node = random.choice(player_graph.nodes)
