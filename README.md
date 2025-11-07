@@ -4,11 +4,15 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 # To Do
 - Generate initial values
 - Generate starting areas for players or players + AI
+    - add computer player zones into main graph
 - Generate fair main grid
 - Print template to file
 - generate template values
+- starting zones connect to main branch using same node
 
 # Variables description
+
+## mines
 
 Next batch of variables:
 
@@ -36,3 +40,31 @@ sulfur_density
 crystals-density
 gems_density
 gold_density
+
+## terrain and monsters
+
+Another batch of parameters:
+terrain_match_town - 1 in START zone, in any other zone, if neutral_towns_min > 0 or neutral_castle_min > 0 it has 80% chance to be 1, else 0
+allowed_terrain[1-10] - ten variables for possible terrain types, placeholder for future use. All set to 1
+monster_strenght - possible values are 0-3. Should be 2 for START zone. 80% to be 2 in TREASURE zone, otherwise 3. 70% to be 2 in SUPER_TREASURE zone, otherwise 3. Always 2 in JUNCTION zone
+monster_match_town - 0 in START zone, in any other zone, if neutral_towns_min > 0 or neutral_castle_min > 0 it has 10% chance to be 1, else 0
+allowed_monster_type[1-12] - twelve variables for possible allowed monster types. Placeholder for future use. All set to 1
+
+## treasures
+
+* treasure1_low - 500 for START and NEUTRAL zone, 3000 for TREASURE, 10000 for SUPER_TREASURE
+* treasure1_high - 3000 for START and NEUTRAL zone, 6000 for TREASURE, 15000 for SUPER_TREASURE
+* treasure1_density - 9
+* treasure2_low - 3000 for START and NEUTRAL zone, 10000 for TREASURE, 15000 for SUPER_TREASURE
+* treasure2_high - 6000 for START and NEUTRAL zone, 15000 for TREASURE, 20000 for SUPER_TREASURE
+* treasure2_density - 6
+* treasure3_low - 10000 for START and NEUTRAL zone, 15000  for TREASURE, 20000 for SUPER_TREASURE
+* treasure3_high - 15000 for START and NEUTRAL zone, 20000 for TREASURE, 30000 for SUPER_TREASURE
+* treasure3_density - set to 1
+
+in case of JUNCTION type - assign values as if it was NEUTRAL or TREASURE (50/50 chance)
+
+All low/high values above should be slightly randomized (+/- 10%, but should remain integers)
+
+* zone_placement - set to 0
+* objects_section - should be empty

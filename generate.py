@@ -33,6 +33,12 @@ def random_choice_weighted(options):
             return value
     return options[-1][0]  # fallback
 
+def jitter(value, pct=0.1):
+    """Return value randomly adjusted by ±pct, keeping it integer."""
+    low = int(value * (1 - pct))
+    high = int(value * (1 + pct))
+    return random.randint(low, high)
+
 def pick_random_subset(options, chance_per_item, max_total=None):
     """Return dict of {option: 0 or 1} with chance per item, optionally limited by max_total."""
     chosen = []
@@ -209,6 +215,8 @@ class Graph:
             attributes = node.attributes
             print(f"Node {node.id}{owner}{start_flag}{zone_type}: connected to {connected_ids}. Attributes:\n {attributes}")
 
+
+
 RESOURCE_NAMES = ["wood", "mercury", "ore", "sulfur", "crystals", "gems", "gold"]
 
 def resource_logic(node):
@@ -289,6 +297,97 @@ def resource_logic(node):
 
     return res
 
+def terrain_and_monster_attributes(node):
+    """Generate terrain- and monster-related attributes."""
+    attrs = {}
+
+    nt = node.attributes.get("neutral_towns_min", 0)
+    nc = node.attributes.get("neutral_castle_min", 0)
+
+    # ─── terrain_match_town ───
+    if node.node_type == NodeType.START:
+        attrs["terrain_match_town"] = 1
+    elif nt > 0 or nc > 0:
+        attrs["terrain_match_town"] = 1 if random_bool(0.8) else 0
+    else:
+        attrs["terrain_match_town"] = 0
+
+    # ─── allowed_terrain_1–10 (placeholders) ───
+    for i in range(1, 11):
+        attrs[f"allowed_terrain_{i}"] = 1
+
+    # ─── monster_strength ───
+    if node.node_type == NodeType.START or node.node_type == NodeType.NEUTRAL or node.node_type == NodeType.JUNCTION:
+        attrs["monster_strength"] = 2
+    elif node.node_type == NodeType.TREASURE:
+        attrs["monster_strength"] = 2 if random_bool(0.8) else 3
+    elif node.node_type == NodeType.SUPER_TREASURE:
+        attrs["monster_strength"] = 2 if random_bool(0.7) else 3
+    else:
+        attrs["monster_strength"] = 0  # fallback / neutral
+
+    # ─── monster_match_town ───
+    if node.node_type == NodeType.START:
+        attrs["monster_match_town"] = 0
+    elif nt > 0 or nc > 0:
+        attrs["monster_match_town"] = 1 if random_bool(0.1) else 0
+    else:
+        attrs["monster_match_town"] = 0
+
+    # ─── allowed_monster_type_1–12 (placeholders) ───
+    for i in range(1, 13):
+        attrs[f"allowed_monster_type_{i}"] = 1
+
+    return attrs
+
+def treasure_attributes(node):
+    """Generate treasure-related attributes for the zone."""
+    attrs = {}
+
+    # Determine effective type (JUNCTION uses NEUTRAL or TREASURE randomly)
+    ntype = node.node_type
+    if node.node_type == NodeType.JUNCTION:
+        ntype = NodeType.NEUTRAL if random_bool(0.5) else NodeType.TREASURE
+
+    # Base definitions per type
+    if ntype == NodeType.START or ntype == NodeType.NEUTRAL:
+        t1_low, t1_high = 500, 3000
+        t2_low, t2_high = 3000, 6000
+        t3_low, t3_high = 10000, 15000
+    elif ntype == NodeType.TREASURE:
+        t1_low, t1_high = 3000, 6000
+        t2_low, t2_high = 10000, 15000
+        t3_low, t3_high = 15000, 20000
+    elif ntype == NodeType.SUPER_TREASURE:
+        t1_low, t1_high = 10000, 15000
+        t2_low, t2_high = 15000, 20000
+        t3_low, t3_high = 20000, 30000
+    else:
+        # fallback — treat as neutral
+        t1_low, t1_high = 500, 3000
+        t2_low, t2_high = 3000, 6000
+        t3_low, t3_high = 10000, 15000
+
+    # Apply jitter ±10%
+    attrs["treasure1_low"] = jitter(t1_low)
+    attrs["treasure1_high"] = jitter(t1_high)
+    attrs["treasure1_density"] = 9
+
+    attrs["treasure2_low"] = jitter(t2_low)
+    attrs["treasure2_high"] = jitter(t2_high)
+    attrs["treasure2_density"] = 6
+
+    attrs["treasure3_low"] = jitter(t3_low)
+    attrs["treasure3_high"] = jitter(t3_high)
+    attrs["treasure3_density"] = 1
+
+    # Fixed attributes
+    attrs["zone_placement"] = ""     # other posible values: ground, underground
+    attrs["objects_section"] = ""  # empty placeholder
+
+    return attrs
+
+
 def assign_zone_attributes(node):
     config = ZONE_CONFIG.get(node.node_type, {})
     for key, value in config.items():
@@ -300,7 +399,12 @@ def assign_zone_attributes(node):
         else:
             node.attributes[key] = value
 
+    # generate mines
     node.attributes.update(resource_logic(node))
+    # generate terrain and monsters
+    node.attributes.update(terrain_and_monster_attributes(node))
+    # generate treasure
+    node.attributes.update(treasure_attributes(node))
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
     """Generate a connected subgraph with controlled link randomness."""
@@ -335,7 +439,6 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
 
     return g
 
-
 def generate_world(num_players=3,
                    main_zone_nodes=(8, 16),
                    player_zone_nodes=(3, 4),
@@ -349,7 +452,6 @@ def generate_world(num_players=3,
     main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
     
     for node in main_graph.nodes:
-        # neutral world nodes
         roll = random.random()
         if roll < 0.1:
             node.node_type = NodeType.JUNCTION
@@ -363,13 +465,10 @@ def generate_world(num_players=3,
 
     current_id += num_main_nodes
 
-    # Generate player areas (identical structure, node types, and attributes for all)
-    player_graphs = []
-    num_nodes = random.randint(*player_zone_nodes)
-
     # ──────────────────────────────
     # STEP 1: Generate template zone (first player)
     # ──────────────────────────────
+    num_nodes = random.randint(*player_zone_nodes)
     template_graph = generate_subgraph(
         num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
     )
@@ -388,11 +487,10 @@ def generate_world(num_players=3,
                 node.node_type = NodeType.SUPER_TREASURE
         assign_zone_attributes(node)
 
-    # Add logic to ensure specific castle is same type as players castle
-
     # ──────────────────────────────
     # STEP 2: Clone template for each player
     # ──────────────────────────────
+    player_graphs = []
     for p in range(1, num_players + 1):
         nodes_map = {}
         copied_nodes = []
@@ -404,7 +502,6 @@ def generate_world(num_players=3,
                 owner=p,
                 is_start=n.is_start
             )
-            # Deep copy all generated attributes
             new_node.attributes = dict(n.attributes)
             if new_node.node_type == NodeType.START:
                 new_node.attributes["player_control"] = new_node.owner
@@ -425,25 +522,36 @@ def generate_world(num_players=3,
 
         player_graphs.append(g)
 
-
-    # Merge everything and connect player areas to main graph
+    # ──────────────────────────────
+    # STEP 3: Merge everything and connect player areas
+    # ──────────────────────────────
     world = Graph()
     world.merge(main_graph)
 
+    # Pick connection nodes ONCE based on the template graph
+    template_nodes = list(template_graph.nodes)
+    if len(template_nodes) == 1:
+        connection_indices = [0, 0]
+    else:
+        connection_indices = [
+            random.randrange(len(template_nodes)),
+            random.randrange(len(template_nodes))
+        ]
+    # (If both happen to be the same, we use the same node twice)
 
-#Fixup! the same node/s should be connected to main map for each player zone
+    # Connect each player graph using the same origin node(s)
     for player_graph in player_graphs:
-        # Choose one node in player's area as connection node
-        connection_node = random.choice(player_graph.nodes)
-        # Connect to 2 random nodes in the main graph
-        main_targets = random.sample(main_graph.nodes, 2)
-        for target in main_targets:
+        player_nodes = list(player_graph.nodes)
+        main_targets = random.sample(list(main_graph.nodes), 2)
+
+        for conn_idx, target in zip(connection_indices, main_targets):
+            connection_node = player_nodes[conn_idx]
             player_graph.add_link(connection_node, target)
-        # Merge into world
+
+        # Merge player graph into world
         world.merge(player_graph)
 
     return world
-
 
 # ───────────────────────────────────────────────
 # Small geometry helpers (no extra deps)
