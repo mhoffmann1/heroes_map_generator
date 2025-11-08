@@ -1,5 +1,6 @@
 import math
 import random
+import argparse
 from enum import Enum, auto
 from itertools import combinations
 
@@ -33,6 +34,17 @@ def random_choice_weighted(options):
             return value
     return options[-1][0]  # fallback
 
+def weighted_choice(weights):
+    """Return index (1-based) according to weight distribution list."""
+    total = sum(weights)
+    r = random.uniform(0, total)
+    upto = 0
+    for i, w in enumerate(weights, start=1):
+        if upto + w >= r:
+            return i
+        upto += w
+    return len(weights)
+
 def jitter(value, pct=0.1):
     """Return value randomly adjusted by ±pct, keeping it integer."""
     low = int(value * (1 - pct))
@@ -48,6 +60,13 @@ def pick_random_subset(options, chance_per_item, max_total=None):
     if max_total and len(chosen) > max_total:
         chosen = random.sample(chosen, max_total)
     return {o: 1 if o in chosen else 0 for o in options}
+
+# Optional manual overrides (these replace generated defaults if set)
+#MANUAL_OVERRIDES = {
+#    "monster_disposition": None,     # (0 - always join, 1 - Friendly [1-7], 2 - Aggresive [1-10], 3 - hostile [4-10], 4-  Savage [10]
+#    "joining_percent": None,         # (0 - 25%, 1 - 50%, 2 - 75%, 3 - 100%)
+#    "join_only_for_money": None      # usually "x" or ""
+#}
 
 ZONE_CONFIG = {
     NodeType.START: {
@@ -177,7 +196,6 @@ class Link:
     def __repr__(self):
         return f"Link({self.node_a.id} <-> {self.node_b.id})"
 
-
 class Graph:
     def __init__(self):
         self.nodes = []
@@ -214,8 +232,6 @@ class Graph:
             zone_type = f" {node.node_type}"
             attributes = node.attributes
             print(f"Node {node.id}{owner}{start_flag}{zone_type}: connected to {connected_ids}. Attributes:\n {attributes}")
-
-
 
 RESOURCE_NAMES = ["wood", "mercury", "ore", "sulfur", "crystals", "gems", "gold"]
 
@@ -387,6 +403,59 @@ def treasure_attributes(node):
 
     return attrs
 
+def meta_zone_attributes(node):
+    """Generate final batch of meta/control attributes for the zone."""
+    attrs = {}
+
+    # ─── UI positions (4 placeholders, can be ±float, set to empty now)
+    for i in range(1, 5):
+        attrs[f"UI_position_{i}"] = ""
+
+    # ─── Various placeholders
+    attrs["zone_faction_force_neutral"] = ""
+    attrs["zone_repulsion"] = ""
+    attrs["town_type_rules"] = ""
+    attrs["shipyard_density"] = ""
+    attrs["terrain_type_rule"] = ""
+    attrs["customized_allowed_factions_bitmap"] = ""
+    attrs["zone_faction_rule"] = ""
+
+    # ─── allow_non_coherent_road ───
+    attrs["allow_non_coherent_road"] = "" if random_bool(0.75) else "x"
+
+    # ─── monster_disposition ───
+    if MANUAL_OVERRIDES.get("monster_disposition") is not None:
+        attrs["monster_disposition"] = MANUAL_OVERRIDES["monster_disposition"]
+    else:
+        # 25% → 1, 50% → 2, 25% → 3
+        attrs["monster_disposition"] = weighted_choice([0.25, 0.5, 0.25])
+
+    # ─── custom_monster_disposition ───
+    attrs["custom_monster_disposition"] = ""
+
+    # ─── joining_percent ───
+    if MANUAL_OVERRIDES.get("joining_percent") is not None:
+        attrs["joining_percent"] = MANUAL_OVERRIDES["joining_percent"]
+    else:
+        attrs["joining_percent"] = 1
+
+    # ─── join_only_for_money ───
+    if MANUAL_OVERRIDES.get("join_only_for_money") is not None:
+        attrs["join_only_for_money"] = MANUAL_OVERRIDES["join_only_for_money"]
+    else:
+        attrs["join_only_for_money"] = "x"
+
+    # ─── shipyard_min ───
+    if node.node_type == NodeType.SUPER_TREASURE:
+        attrs["shipyard_min"] = 1 if random_bool(0.1) else ""
+    else:
+        attrs["shipyard_min"] = ""
+
+    # ─── max_road_block_value ───
+    attrs["max_road_block_value"] = 4000 if node.node_type == NodeType.START else ""
+
+    return attrs
+
 
 def assign_zone_attributes(node):
     config = ZONE_CONFIG.get(node.node_type, {})
@@ -405,6 +474,9 @@ def assign_zone_attributes(node):
     node.attributes.update(terrain_and_monster_attributes(node))
     # generate treasure
     node.attributes.update(treasure_attributes(node))
+    # misc parameters
+    node.attributes.update(meta_zone_attributes(node))
+
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
     """Generate a connected subgraph with controlled link randomness."""
@@ -685,6 +757,19 @@ def visualize_graph(world):
 
 # ───────────────────────────────────────────────
 if __name__ == "__main__":
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--monster_disposition", type=int, help="Override monster disposition (1–3)")
+    parser.add_argument("--joining_percent", type=float, help="Override joining percent")
+    parser.add_argument("--join_only_for_money", type=str, help="Override join_only_for_money (x or empty)")
+    args = parser.parse_args()
+
+    MANUAL_OVERRIDES = {
+        "monster_disposition": args.monster_disposition,
+        "joining_percent": args.joining_percent,
+        "join_only_for_money": args.join_only_for_money
+    }
+
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
     world = generate_world(num_players=3)

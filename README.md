@@ -68,3 +68,25 @@ All low/high values above should be slightly randomized (+/- 10%, but should rem
 
 * zone_placement - set to 0
 * objects_section - should be empty
+
+## Misc
+
+final batch of parameters for zones:
+
+* UI_position_[1-4] - 4 values that can be negative or positive float type. Placeholder for future use. Set to empty.
+* zone_faction_force_neutral - set to empty
+* allow_non_coherent_road - 75% to be empty, otherwise set to 'x'
+* zone_repulsion - set to empty 
+* town_type_rules - set to empty
+* monster_disposition - 25% to be 1, 50% to be 2, 25% to be 3
+* custom_monster_disposition - set to empty
+* joining_percent - set to 1
+* join_only_for_money - set to 'x'
+* shipyard_min - 10% to be 1 in SUPER_TREASURE zone, empty in all other cases
+* shipyard_density - set to empty
+* terrain_type_rule - set to empty
+* customized_allowed_factions_bitmap - set to empty
+* zone_faction_rule - set to empty
+* max_road_block_value - 4000 for START zone, otherwise empty
+
+monster_disposition, joining_percent and join_only_for_money variables should have an option to be provided manually during script execution - in such case the provided value should overwrite the default value provided here
