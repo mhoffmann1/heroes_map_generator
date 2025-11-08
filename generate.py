@@ -511,18 +511,14 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
 
     return g
 
-def generate_world(num_players=3,
-                   main_zone_nodes=(8, 16),
-                   player_zone_nodes=(3, 4),
-                   avg_links_main=3,
-                   avg_links_player=2):
-    """Generate full world graph with player starting areas + main graph."""
-    current_id = 1
-
-    # Generate main graph
+# ───────────────────────────────────────────────
+# Helpers to build main graph by style
+# ───────────────────────────────────────────────
+def _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main):
     num_main_nodes = random.randint(*main_zone_nodes)
     main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
-    
+
+    # Type assignment (current "random" method)
     for node in main_graph.nodes:
         roll = random.random()
         if roll < 0.1:
@@ -535,17 +531,56 @@ def generate_world(num_players=3,
             node.node_type = NodeType.SUPER_TREASURE
         assign_zone_attributes(node)
 
+    return main_graph, num_main_nodes
+
+def _generate_main_graph_balanced(main_zone_nodes, current_id, avg_links_main):
+    """
+    Placeholder 'balanced' generator.
+    For now it mirrors the random generator, but this hook is where
+    we’ll implement fairness constraints later (degree caps, spacing, etc.).
+    """
+    main_graph, num_main_nodes = _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main)
+    # TODO: Replace with true balanced logic
+    return main_graph, num_main_nodes
+
+# ───────────────────────────────────────────────
+# Core world generation with human + AI players + map style
+# ───────────────────────────────────────────────
+def generate_world(
+    num_human_players=3,
+    num_ai_players=0,
+    map_style="random",                 # "random" or "balanced"
+    main_zone_nodes=(8, 16),
+    player_zone_nodes=(3, 4),
+    avg_links_main=3,
+    avg_links_player=2
+):
+    """
+    Generate full world:
+    - Main graph by 'map_style'
+    - Human players: identical starting areas (cloned from one template)
+    - AI players: single START node cloned from the template's START node
+    """
+    assert 1 <= num_human_players <= 8, "Human players must be in [1, 8]"
+    total_players = num_human_players + num_ai_players
+    assert total_players <= 8, "Total players (human + AI) must be <= 8"
+
+    current_id = 1
+
+    # 1) Generate main graph by style
+    if map_style.lower() == "balanced":
+        main_graph, num_main_nodes = _generate_main_graph_balanced(main_zone_nodes, current_id, avg_links_main)
+    else:
+        main_graph, num_main_nodes = _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main)
     current_id += num_main_nodes
 
-    # ──────────────────────────────
-    # STEP 1: Generate template zone (first player)
-    # ──────────────────────────────
+    # 2) Build human template starting area
     num_nodes = random.randint(*player_zone_nodes)
     template_graph = generate_subgraph(
         num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
     )
 
-    # Assign node types & generate attributes for template
+    # Assign node types & attributes for template (identical across all humans)
     for node in template_graph.nodes:
         if node.is_start:
             node.node_type = NodeType.START
@@ -559,11 +594,14 @@ def generate_world(num_players=3,
                 node.node_type = NodeType.SUPER_TREASURE
         assign_zone_attributes(node)
 
-    # ──────────────────────────────
-    # STEP 2: Clone template for each player
-    # ──────────────────────────────
-    player_graphs = []
-    for p in range(1, num_players + 1):
+    # Keep a reference to the template START node (for AI cloning)
+    tmpl_start = next((n for n in template_graph.nodes if n.node_type == NodeType.START), None)
+    if tmpl_start is None:
+        raise RuntimeError("Template graph did not produce a START node — this should not happen.")
+
+    # 3) Clone template for each human player
+    human_graphs = []
+    for p in range(1, num_human_players + 1):
         nodes_map = {}
         copied_nodes = []
 
@@ -585,45 +623,109 @@ def generate_world(num_players=3,
         g = Graph()
         for n in copied_nodes:
             g.add_node(n)
-
-        # Recreate links using the ID map
         for l in template_graph.links:
             a = nodes_map[l.node_a.id]
             b = nodes_map[l.node_b.id]
             g.add_link(a, b)
 
-        player_graphs.append(g)
+        human_graphs.append(g)
 
-    # ──────────────────────────────
-    # STEP 3: Merge everything and connect player areas
-    # ──────────────────────────────
+    # 4) Prepare world & connect human areas to main graph
     world = Graph()
     world.merge(main_graph)
 
-    # Pick connection nodes ONCE based on the template graph
+    # Choose connection indices ONCE from the template (can be same index twice)
     template_nodes = list(template_graph.nodes)
     if len(template_nodes) == 1:
         connection_indices = [0, 0]
     else:
         connection_indices = [
             random.randrange(len(template_nodes)),
-            random.randrange(len(template_nodes))
+            random.randrange(len(template_nodes)),
         ]
-    # (If both happen to be the same, we use the same node twice)
 
-    # Connect each player graph using the same origin node(s)
-    for player_graph in player_graphs:
-        player_nodes = list(player_graph.nodes)
+    for human_graph in human_graphs:
+        player_nodes = list(human_graph.nodes)
         main_targets = random.sample(list(main_graph.nodes), 2)
-
         for conn_idx, target in zip(connection_indices, main_targets):
             connection_node = player_nodes[conn_idx]
-            player_graph.add_link(connection_node, target)
+            human_graph.add_link(connection_node, target)
+        world.merge(human_graph)
 
-        # Merge player graph into world
-        world.merge(player_graph)
+    # 5) Create AI players: each gets a single START node cloned from the template START
+    #    and connects to main graph with 2 links
+    next_owner = num_human_players + 1
+    for _ in range(num_ai_players):
+        ai_start = Node(current_id, node_type=NodeType.START, owner=next_owner, is_start=True)
+        ai_start.attributes = dict(tmpl_start.attributes)
+        ai_start.attributes["player_control"] = next_owner
+
+        ai_graph = Graph()
+        ai_graph.add_node(ai_start)
+
+        # connect to 2 random main graph nodes (from the same AI start node)
+        main_targets = random.sample(list(main_graph.nodes), 2)
+        for target in main_targets:
+            ai_graph.add_link(ai_start, target)
+
+        world.merge(ai_graph)
+        current_id += 1
+        next_owner += 1
 
     return world
+
+# ───────────────────────────────────────────────
+# Simple interactive entrypoint
+# ───────────────────────────────────────────────
+def _ask_int(prompt, min_val=None, max_val=None):
+    while True:
+        try:
+            v = int(input(prompt).strip())
+            if min_val is not None and v < min_val:
+                print(f"Value must be >= {min_val}.")
+                continue
+            if max_val is not None and v > max_val:
+                print(f"Value must be <= {max_val}.")
+                continue
+            return v
+        except ValueError:
+            print("Please enter an integer.")
+
+def _ask_choice(prompt, choices):
+    choices_lower = [c.lower() for c in choices]
+    while True:
+        v = input(f"{prompt} ({'/'.join(choices)}): ").strip().lower()
+        if v in choices_lower:
+            return v
+        print(f"Please choose one of: {', '.join(choices)}")
+
+
+def build_world_interactive():
+    # 1) Human players
+    num_humans = _ask_int("Number of HUMAN players (1-8): ", 1, 8)
+
+    # 2) AI players, keep total <= 8
+    max_ai = 8 - num_humans
+    if max_ai == 0:
+        print("Maximum total players reached; AI players set to 0.")
+        num_ai = 0
+    else:
+        num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
+
+    # 3) Map style
+    map_style = _ask_choice("Map style", ["random", "balanced"])
+
+    world = generate_world(
+        num_human_players=num_humans,
+        num_ai_players=num_ai,
+        map_style=map_style,
+        main_zone_nodes=(8, 16),
+        player_zone_nodes=(3, 4),
+        avg_links_main=3,
+        avg_links_player=2
+    )
+    return world
+
 
 # ───────────────────────────────────────────────
 # Small geometry helpers (no extra deps)
@@ -772,7 +874,8 @@ if __name__ == "__main__":
 
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
-    world = generate_world(num_players=3)
+    #world = generate_world(num_players=3)
+    world = build_world_interactive()
     world.display()
 
     visualize_graph(world)
