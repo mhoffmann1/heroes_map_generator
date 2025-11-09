@@ -2,13 +2,14 @@
 Generates random templates for Heroes 3 HotA map generator for a more 'random' user experience
 
 # To Do
-- Generate initial values
+- Generate initial values for zones
+- Generate initial values for connections
 - Generate starting areas for players or players + AI
     - add computer player zones into main graph
 - Generate fair main grid
 - Print template to file
 - generate template values
-- starting zones connect to main branch using same node
+- starting zones connect to main branch using same node - DONE
 
 # Variables description
 
