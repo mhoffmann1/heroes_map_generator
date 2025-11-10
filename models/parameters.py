@@ -1,6 +1,15 @@
+import random
 from itertools import combinations
-from config import ZONE_CONFIG, RESOURCE_NAMES
-from utils.randomize import random_bool, random_choice_weighted, weighted_choice, jitter, pick_random_subset
+
+from config import MANUAL_OVERRIDES, RESOURCE_NAMES, ZONE_CONFIG
+from models.objects import NodeType
+from utils.randomize import (
+    jitter,
+    pick_random_subset,
+    random_bool,
+    random_choice_weighted,
+    weighted_choice,
+)
 
 def resource_logic(node):
     """Generates *_min and *_density attributes for a given node."""
@@ -89,37 +98,37 @@ def terrain_and_monster_attributes(node):
 
     # ─── terrain_match_town ───
     if node.node_type == NodeType.START:
-        attrs["terrain_match_town"] = 1
+        attrs["terrain_match_town"] = 'x'
     elif nt > 0 or nc > 0:
-        attrs["terrain_match_town"] = 1 if random_bool(0.8) else 0
+        attrs["terrain_match_town"] = 'x' if random_bool(0.8) else 0
     else:
         attrs["terrain_match_town"] = 0
 
     # ─── allowed_terrain_1–10 (placeholders) ───
     for i in range(1, 11):
-        attrs[f"allowed_terrain_{i}"] = 1
+        attrs[f"allowed_terrain_{i}"] = 'x'
 
     # ─── monster_strength ───
     if node.node_type == NodeType.START or node.node_type == NodeType.NEUTRAL or node.node_type == NodeType.JUNCTION:
-        attrs["monster_strength"] = 2
+        attrs["monster_strength"] = 'avg'
     elif node.node_type == NodeType.TREASURE:
-        attrs["monster_strength"] = 2 if random_bool(0.8) else 3
+        attrs["monster_strength"] = 'avg' if random_bool(0.8) else 'strong'
     elif node.node_type == NodeType.SUPER_TREASURE:
-        attrs["monster_strength"] = 2 if random_bool(0.7) else 3
+        attrs["monster_strength"] = 'avg' if random_bool(0.7) else 'strong'
     else:
-        attrs["monster_strength"] = 0  # fallback / neutral
+        attrs["monster_strength"] = 'none'  # fallback
 
     # ─── monster_match_town ───
     if node.node_type == NodeType.START:
         attrs["monster_match_town"] = 0
     elif nt > 0 or nc > 0:
-        attrs["monster_match_town"] = 1 if random_bool(0.1) else 0
+        attrs["monster_match_town"] = 'x' if random_bool(0.1) else 0
     else:
         attrs["monster_match_town"] = 0
 
     # ─── allowed_monster_type_1–12 (placeholders) ───
     for i in range(1, 13):
-        attrs[f"allowed_monster_type_{i}"] = 1
+        attrs[f"allowed_monster_type_{i}"] = 'x'
 
     return attrs
 
@@ -223,7 +232,6 @@ def meta_zone_attributes(node):
 
     return attrs
 
-
 def assign_zone_attributes(node):
     config = ZONE_CONFIG.get(node.node_type, {})
     for key, value in config.items():
@@ -243,7 +251,6 @@ def assign_zone_attributes(node):
     node.attributes.update(treasure_attributes(node))
     # misc parameters
     node.attributes.update(meta_zone_attributes(node))
-
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
     """Generate a connected subgraph with controlled link randomness."""
@@ -277,3 +284,158 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
         random.choice(nodes).is_start = True
 
     return g
+
+def assign_all_link_attributes(graph):
+    """
+    Assign attributes for every link in a graph.
+    Honors pre-marked player→main links.
+    """
+    for link in graph.links:
+        assign_link_attributes(link, is_player_to_main=link.is_player_to_main)
+
+def assign_link_attributes(link, is_player_to_main=False):
+    """
+    Assign parameters to a link based on connected zone types and game rules.
+    If `is_player_to_main` is True, this link connects player start area to the main map.
+    """
+
+    a, b = link.node_a, link.node_b
+    a_type = a.node_type
+    b_type = b.node_type
+    types = {a_type, b_type}
+
+    attrs = {}
+
+    # ───────────────────────────────
+    # GUARD STRENGTH
+    # ───────────────────────────────
+    guard_strength = 0
+
+    # START zone logic
+    if NodeType.START in types:
+        # Determine the "other" node type
+        other_type = b_type if a_type == NodeType.START else a_type
+        if other_type in (NodeType.NEUTRAL, NodeType.JUNCTION):
+            guard_strength = random.randint(3000, 4000)
+        elif other_type == NodeType.TREASURE:
+            guard_strength = random.randint(5000, 7000)
+        elif other_type == NodeType.SUPER_TREASURE:
+            guard_strength = random.randint(8000, 12000)
+        else:
+            guard_strength = random.randint(2500, 3500)
+
+        # Add bonus for connection to main world
+        if is_player_to_main:
+            guard_strength += random.randint(3000, 6000)
+
+    # All other (non-start) combinations
+    else:
+        # Simple heuristic matrix
+        def strength_range(a_t, b_t):
+            combo = {a_t, b_t}
+            if combo == {NodeType.NEUTRAL}:
+                return (2000, 4000)
+            if combo == {NodeType.NEUTRAL, NodeType.TREASURE}:
+                return (5000, 8000)
+            if combo == {NodeType.TREASURE}:
+                return (8000, 10000)
+            if combo == {NodeType.TREASURE, NodeType.SUPER_TREASURE}:
+                return (10000, 15000)
+            if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE}:
+                return (15000, 25000)
+            if NodeType.JUNCTION in combo:
+                return (3000, 7000)
+            # fallback
+            return (2000, 4000)
+
+        low, high = strength_range(a_type, b_type)
+        guard_strength = random.randint(low, high)
+
+    # Cap at 25 000
+    attrs["guard_strength"] = min(guard_strength, 25000)
+
+    # ───────────────────────────────
+    # CONNECTION TYPE: WIDE
+    # ───────────────────────────────
+    if NodeType.SUPER_TREASURE in types:
+        attrs["connection_type_wide"] = ""
+    else:
+        attrs["connection_type_wide"] = "" if random.random() < 0.9 else "1"
+
+    # ───────────────────────────────
+    # CONNECTION TYPE: BORDERGUARD
+    # ───────────────────────────────
+    attrs["connection_type_borderguard"] = ""
+
+    # ───────────────────────────────
+    # ROADS
+    # ───────────────────────────────
+    if NodeType.START in types:
+        attrs["roads"] = "+"
+    else:
+        attrs["roads"] = "+" if random.random() < 0.75 else "-"
+
+    # ───────────────────────────────
+    # PLACEMENT HINT
+    # ───────────────────────────────
+    attrs["placement_hint"] = "random"
+
+    # ───────────────────────────────
+    # CONNECTION TYPE: FICTIVE
+    # ───────────────────────────────
+    attrs["connection_type_fictive"] = ""
+
+    # ───────────────────────────────
+    # MONOLITH REPULSION
+    # ───────────────────────────────
+    attrs["monolith_repulsion"] = 1 if random.random() < 0.2 else ""
+
+    # ───────────────────────────────
+    # PLAYER LIMITS
+    # ───────────────────────────────
+    attrs["human_players_min"] = 1
+    attrs["human_players_max"] = 8
+    attrs["total_players_min"] = 2
+    attrs["total_players_max"] = 8
+
+    # Attach attributes
+    link.attributes = attrs
+
+def sanity_check_links(graph):
+    """
+    Verify that all links in the graph have attributes assigned.
+    Prints a summary and highlights missing or incomplete links.
+    """
+    total_links = len(graph.links)
+    missing_attrs = []
+    attr_summary = {}
+
+    for link in graph.links:
+        attrs = getattr(link, "attributes", None)
+        if not attrs or not isinstance(attrs, dict) or not attrs:
+            missing_attrs.append(link)
+            continue
+
+        # Count how many links have each guard strength range
+        gs = attrs.get("guard_strength", None)
+        if gs is not None:
+            bucket = (gs // 5000) * 5000
+            attr_summary[bucket] = attr_summary.get(bucket, 0) + 1
+
+    print("\n──── Link Attribute Sanity Check ────")
+    print(f"Total links: {total_links}")
+    print(f"Links with assigned attributes: {total_links - len(missing_attrs)}")
+    print(f"Links missing attributes: {len(missing_attrs)}")
+
+    if missing_attrs:
+        print("\n⚠️  Missing attribute data for:")
+        for link in missing_attrs[:10]:  # avoid spamming
+            print(f"  {link}")
+        if len(missing_attrs) > 10:
+            print("  ... (more omitted)")
+
+    print("\nGuard strength distribution (approximate):")
+    for bucket in sorted(attr_summary.keys()):
+        print(f"  {bucket:5d}–{bucket+4999:5d} : {attr_summary[bucket]} links")
+
+    print("─────────────────────────────────────\n")

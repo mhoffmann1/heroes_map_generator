@@ -1,3 +1,6 @@
+import random
+
+
 def random_bool(chance):
     """Return True with given probability (0.0–1.0)."""
     return random.random() < chance

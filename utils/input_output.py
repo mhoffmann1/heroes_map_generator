@@ -1,5 +1,8 @@
 import math
+
 from models.map_graph import generate_world
+from models.objects import NodeType
+
 
 # ───────────────────────────────────────────────
 # Simple interactive entrypoint
@@ -43,6 +46,7 @@ def build_world_interactive():
     map_style = _ask_choice("Map style", ["random", "balanced"])
 
     # Ask about zone numbers and number of links
+    # balanced should require at least 2 Human players
 
     world = generate_world(
         num_human_players=num_humans,

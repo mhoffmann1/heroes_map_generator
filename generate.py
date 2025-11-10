@@ -1,7 +1,9 @@
-import random
 import argparse
+import random
 
+from config import MANUAL_OVERRIDES
 from utils.input_output import build_world_interactive, visualize_graph
+from utils.export import export_to_h3t
 
 # Optional visualization libraries
 try:
@@ -19,11 +21,11 @@ if __name__ == "__main__":
     parser.add_argument("--join_only_for_money", type=str, help="Override join_only_for_money (x or empty)")
     args = parser.parse_args()
 
-    MANUAL_OVERRIDES = {
+    MANUAL_OVERRIDES.update({
         "monster_disposition": args.monster_disposition,
         "joining_percent": args.joining_percent,
         "join_only_for_money": args.join_only_for_money
-    }
+    })
 
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
@@ -32,3 +34,5 @@ if __name__ == "__main__":
     world.display()
 
     visualize_graph(world)
+
+    export_to_h3t(world)
