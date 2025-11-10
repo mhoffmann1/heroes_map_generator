@@ -1,0 +1,453 @@
+from enum import Enum, auto
+from itertools import combinations
+from models.parameters import assign_zone_attributes
+
+class NodeType(Enum):
+    START = auto()
+    NEUTRAL = auto()
+    TREASURE = auto()
+    SUPER_TREASURE = auto()
+    JUNCTION = auto()
+
+class Node:
+    def __init__(self, node_id, node_type=None, owner=None, is_start=False):
+        self.id = node_id
+        self.node_type = node_type
+        self.owner = owner
+        self.is_start = is_start
+        self.links = []
+        self.attributes = {}  # all generated values live here
+
+    def add_link(self, link):
+        if link not in self.links:
+            self.links.append(link)
+
+    def __repr__(self):
+        type_name = self.node_type.name if self.node_type else "?"
+        owner = f"[P{self.owner}]" if self.owner else ""
+        return f"Node({self.id}, {type_name}{owner}{' (Start)' if self.is_start else ''})"
+
+class Link:
+    def __init__(self, node_a, node_b):
+        self.node_a = node_a
+        self.node_b = node_b
+
+    def connects(self, node):
+        return self.node_b if node == self.node_a else self.node_a
+
+    def __repr__(self):
+        return f"Link({self.node_a.id} <-> {self.node_b.id})"
+
+class Graph:
+    def __init__(self):
+        self.nodes = []
+        self.links = []
+
+    def add_node(self, node):
+        self.nodes.append(node)
+
+    def add_link(self, node_a, node_b):
+        if not self.nodes_connected(node_a, node_b):
+            link = Link(node_a, node_b)
+            node_a.add_link(link)
+            node_b.add_link(link)
+            self.links.append(link)
+
+    def nodes_connected(self, node_a, node_b):
+        return any(
+            (l.node_a == node_a and l.node_b == node_b)
+            or (l.node_a == node_b and l.node_b == node_a)
+            for l in self.links
+        )
+
+    def merge(self, other_graph):
+        """Merge another graph into this one, preserving direct node references safely."""
+        existing_ids = {n.id for n in self.nodes}
+
+        # Add all nodes that are not already present
+        for node in other_graph.nodes:
+            if node.id not in existing_ids:
+                self.nodes.append(node)
+                existing_ids.add(node.id)
+
+        # Merge links (avoid duplicates, keep original node references)
+        existing_pairs = {(min(l.node_a.id, l.node_b.id), max(l.node_a.id, l.node_b.id)) for l in self.links}
+
+        for link in other_graph.links:
+            pair = (min(link.node_a.id, link.node_b.id), max(link.node_a.id, link.node_b.id))
+            if pair not in existing_pairs:
+                self.links.append(link)
+                existing_pairs.add(pair)
+
+
+    def display(self):
+        print(f"\nGraph with {len(self.nodes)} nodes and {len(self.links)} links:")
+        for node in self.nodes:
+            connected_ids = [l.connects(node).id for l in node.links]
+            start_flag = " (Start)" if node.is_start else ""
+            owner = f" [Player{node.owner}]" if node.owner else ""
+            zone_type = f" {node.node_type}"
+            attributes = node.attributes
+            print(f"Node {node.id}{owner}{start_flag}{zone_type}: connected to {connected_ids}.")
+
+def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
+    """Generate a connected subgraph with controlled link randomness."""
+    g = Graph()
+    nodes = [Node(id_start + i, owner=owner) for i in range(num_nodes)]
+    for n in nodes:
+        g.add_node(n)
+
+    # Step 1: Spanning tree for guaranteed connectivity
+    available_nodes = nodes[:]
+    connected = [available_nodes.pop()]
+    while available_nodes:
+        node_a = random.choice(connected)
+        node_b = available_nodes.pop()
+        g.add_link(node_a, node_b)
+        connected.append(node_b)
+
+    # Step 2: Add random extra links (safe bounded version)
+    max_possible_links = num_nodes * (num_nodes - 1) // 2
+    target_links = min(int(num_nodes * avg_links_per_node / 2), max_possible_links)
+    all_pairs = list(combinations(nodes, 2))
+    random.shuffle(all_pairs)
+
+    for (a, b) in all_pairs:
+        if len(g.links) >= target_links:
+            break
+        g.add_link(a, b)
+
+    # Mark start node if needed
+    if start_zone:
+        random.choice(nodes).is_start = True
+
+    return g
+
+# ───────────────────────────────────────────────
+# Helpers to build main graph by style
+# ───────────────────────────────────────────────
+def _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main):
+    num_main_nodes = random.randint(*main_zone_nodes)
+    main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
+
+    # Type assignment (current "random" method)
+    for node in main_graph.nodes:
+        roll = random.random()
+        if roll < 0.1:
+            node.node_type = NodeType.JUNCTION
+        elif roll < 0.4:
+            node.node_type = NodeType.NEUTRAL
+        elif roll < 0.8:
+            node.node_type = NodeType.TREASURE
+        else:
+            node.node_type = NodeType.SUPER_TREASURE
+        assign_zone_attributes(node)
+
+    return main_graph, num_main_nodes
+
+def _generate_main_graph_balanced(
+    main_zone_nodes,
+    current_id,
+    avg_links_main,
+    num_players=3,
+    num_ai_players=0
+):
+    """
+    Generate a symmetrical balanced main graph:
+      - Clone one small 'core fragment' per human player
+      - Interconnect fragments in mirrored fashion
+      - Add AI players according to rules:
+          * If A >= H → one embedded AI per fragment + remaining global AIs
+          * If A <  H → all AIs are global (connect to all fragments)
+    """
+
+    # 1️⃣ Generate base fragment
+    fragment_size = int(random.randint(*main_zone_nodes) / num_players)
+    base_fragment = generate_subgraph(
+        fragment_size, id_start=current_id, avg_links_per_node=avg_links_main
+    )
+    current_id += fragment_size
+
+    for node in base_fragment.nodes:
+        roll = random.random()
+        if roll < 0.1:
+            node.node_type = NodeType.JUNCTION
+        elif roll < 0.4:
+            node.node_type = NodeType.NEUTRAL
+        elif roll < 0.7:
+            node.node_type = NodeType.TREASURE
+        else:
+            node.node_type = NodeType.SUPER_TREASURE
+        assign_zone_attributes(node)
+
+    # 2️⃣ Clone fragment for each human player
+    clone_graphs = []
+    for _ in range(num_players):
+        nodes_map = {}
+        new_nodes = []
+        g = Graph()
+
+        for n in base_fragment.nodes:
+            new_n = Node(current_id, node_type=n.node_type)
+            new_n.attributes = dict(n.attributes)
+            nodes_map[n.id] = new_n
+            g.add_node(new_n)
+            new_nodes.append(new_n)
+            current_id += 1
+
+        # Recreate internal links
+        for l in base_fragment.links:
+            g.add_link(nodes_map[l.node_a.id], nodes_map[l.node_b.id])
+
+        clone_graphs.append((g, new_nodes))
+
+    # 3️⃣ Connect fragments in mirrored pattern
+    base_nodes = list(base_fragment.nodes)
+    connection_indices = random.sample(range(len(base_nodes)), k=min(2, len(base_nodes)))
+    for i in range(num_players):
+        next_i = (i + 1) % num_players
+        for idx in connection_indices:
+            node_a = clone_graphs[i][1][idx]
+            node_b = clone_graphs[next_i][1][idx]
+            clone_graphs[i][0].add_link(node_a, node_b)
+
+    # 4️⃣ Define indices for connecting player starting zones
+    fragment_node_indices = list(range(len(base_fragment.nodes)))
+    num_connections = random.choice([2, 3])
+    player_connection_indices = random.sample(
+        fragment_node_indices, k=min(num_connections, len(fragment_node_indices))
+    )
+
+    # 5️⃣ Add AI players symmetrically
+    ai_used = 0
+    ai_nodes_all = []  # track all AIs for merging
+    
+    # --- Shared setup for symmetrical connection indices ---
+    fragment_size = len(clone_graphs[0][1])
+    possible_indices = list(range(fragment_size))
+    # Predefine which nodes will be used for AI connections (same pattern everywhere)
+    ai_connection_indices = random.sample(possible_indices, k=min(2, fragment_size))
+    
+    # Case 1️⃣: Embedded AIs (if enough AIs for one per player)
+    if num_ai_players >= num_players:
+        print(f"[DEBUG] Adding embedded AIs with connection indices {ai_connection_indices}")
+        for i in range(num_players):
+            ai_node = Node(
+                current_id,
+                node_type=NodeType.START,
+                owner=num_players + ai_used + 1,
+                is_start=True
+            )
+            ai_node.attributes = {"player_control": ai_node.owner}
+            ai_nodes_all.append(ai_node)
+            current_id += 1
+            ai_used += 1
+    
+            frag_graph, frag_nodes = clone_graphs[i]
+            frag_graph.add_node(ai_node)
+    
+            # Symmetrical connections for embedded AIs
+            for idx in ai_connection_indices:
+                target = frag_nodes[idx % len(frag_nodes)]
+                frag_graph.add_link(ai_node, target)
+    
+            frag_nodes.append(ai_node)
+    
+    # Case 2️⃣: Global AIs (remaining or all)
+    remaining_ais = num_ai_players - ai_used
+    if remaining_ais > 0:
+        print(f"[DEBUG] Adding {remaining_ais} global AIs with connection indices {ai_connection_indices}")
+        for _ in range(remaining_ais):
+            ai_node = Node(
+                current_id,
+                node_type=NodeType.START,
+                owner=num_players + ai_used + 1,
+                is_start=True
+            )
+            ai_node.attributes = {"player_control": ai_node.owner}
+            ai_nodes_all.append(ai_node)
+            current_id += 1
+            ai_used += 1
+    
+            # Connect this AI symmetrically to all fragments
+            for frag_graph, frag_nodes in clone_graphs:
+                for idx in ai_connection_indices:
+                    target = frag_nodes[idx % len(frag_nodes)]
+                    frag_graph.add_link(ai_node, target)
+    
+            # Add node into the first fragment for merge
+            clone_graphs[0][0].add_node(ai_node)
+    
+    # 6️⃣ Merge all fragments into unified main graph
+    main_graph = Graph()
+    for g, _ in clone_graphs:
+        main_graph.merge(g)
+
+
+    return (
+        main_graph,
+        len(main_graph.nodes),
+        player_connection_indices,
+        clone_graphs,
+        base_fragment,
+        current_id
+    )
+
+# ───────────────────────────────────────────────
+# Core world generation with human + AI players + map style
+# ───────────────────────────────────────────────
+def generate_world(
+    num_human_players=3,
+    num_ai_players=0,
+    map_style="random",                 # "random" or "balanced"
+    main_zone_nodes=(8, 16),
+    player_zone_nodes=(3, 4),
+    avg_links_main=3,
+    avg_links_player=2
+):
+    """
+    Generate full world:
+    - Main graph by 'map_style'
+    - Human players: identical starting areas (cloned from one template)
+    - AI players: single START node cloned from the template's START node
+    """
+    assert 1 <= num_human_players <= 8, "Human players must be in [1, 8]"
+    total_players = num_human_players + num_ai_players
+    assert total_players <= 8, "Total players (human + AI) must be <= 8"
+
+    current_id = 1
+
+    # 1) Generate main graph by style
+    if map_style.lower() == "balanced":
+        # ───────────────────────────────────────────────
+        # BALANCED MAP GENERATION
+        # ───────────────────────────────────────────────
+        main_graph, num_main_nodes, player_connection_indices, clone_graphs, base_fragment, current_id = _generate_main_graph_balanced(
+    main_zone_nodes, current_id, avg_links_main, num_players=num_human_players, num_ai_players=num_ai_players
+
+)
+
+
+    else:
+        main_graph, num_main_nodes = _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main)
+        current_id += num_main_nodes
+        
+    # 2) Build human template starting area
+    num_nodes = random.randint(*player_zone_nodes)
+    template_graph = generate_subgraph(
+        num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
+    )
+    # Assign node types & attributes for template (identical across all humans)
+    for node in template_graph.nodes:
+        if node.is_start:
+            node.node_type = NodeType.START
+        else:
+            roll = random.random()
+            if roll < 0.7:
+                node.node_type = NodeType.NEUTRAL
+            elif roll < 0.9:
+                node.node_type = NodeType.TREASURE
+            else:
+                node.node_type = NodeType.SUPER_TREASURE
+        assign_zone_attributes(node)
+    # Keep a reference to the template START node (for AI cloning)
+    if num_ai_players:
+        tmpl_start = next((n for n in template_graph.nodes if n.node_type == NodeType.START), None)
+        if tmpl_start is None:
+            raise RuntimeError("Template graph did not produce a START node — this should not happen.")
+    
+    # 3) Clone template for each human player
+    human_graphs = []
+    for p in range(1, num_human_players + 1):
+        nodes_map = {}
+        copied_nodes = []
+        for n in template_graph.nodes:
+            new_node = Node(
+                current_id,
+                node_type=n.node_type,
+                owner=p,
+                is_start=n.is_start
+            )
+            new_node.attributes = dict(n.attributes)
+            if new_node.node_type == NodeType.START:
+                new_node.attributes["player_control"] = new_node.owner
+            nodes_map[n.id] = new_node
+            copied_nodes.append(new_node)
+            current_id += 1
+        g = Graph()
+        for n in copied_nodes:
+            g.add_node(n)
+        for l in template_graph.links:
+            a = nodes_map[l.node_a.id]
+            b = nodes_map[l.node_b.id]
+            g.add_link(a, b)
+        human_graphs.append(g)
+
+    # 4) Prepare world & connect human areas to main graph
+    world = Graph()
+    world.merge(main_graph)
+
+    if map_style.lower() == "random":
+        # Choose connection indices ONCE from the template (can be same index twice)
+        template_nodes = list(template_graph.nodes)
+        if len(template_nodes) == 1:
+            connection_indices = [0, 0]
+        else:
+            connection_indices = [
+                random.randrange(len(template_nodes)),
+                random.randrange(len(template_nodes)),
+            ]
+        for human_graph in human_graphs:
+            player_nodes = list(human_graph.nodes)
+            main_targets = random.sample(list(main_graph.nodes), 2)
+            for conn_idx, target in zip(connection_indices, main_targets):
+                connection_node = player_nodes[conn_idx]
+                human_graph.add_link(connection_node, target)
+            world.merge(human_graph)
+        # 5) Create AI players: each gets a single START node cloned from the template START
+        #    and connects to main graph with 2 links
+        next_owner = num_human_players + 1
+        for _ in range(num_ai_players):
+            ai_start = Node(current_id, node_type=NodeType.START, owner=next_owner, is_start=True)
+            ai_start.attributes = dict(tmpl_start.attributes)
+            ai_start.attributes["player_control"] = next_owner
+            ai_graph = Graph()
+            ai_graph.add_node(ai_start)
+            # connect to 2 random main graph nodes (from the same AI start node)
+            main_targets = random.sample(list(main_graph.nodes), 2)
+            for target in main_targets:
+                ai_graph.add_link(ai_start, target)
+            world.merge(ai_graph)
+            current_id += 1
+            next_owner += 1
+    else:    
+        # All players share the same pattern of start/main connections
+        num_links = random.choice([2, 3])
+        
+        # Pick which player-zone nodes will connect
+        player_nodes_example = list(template_graph.nodes)
+        player_connection_indices = random.sample(
+            range(len(player_nodes_example)),
+            k=min(num_links, len(player_nodes_example))
+        )
+        
+        # Pick which main-fragment nodes (by index within fragment) will connect
+        base_fragment_nodes = list(base_fragment.nodes)
+        main_connection_indices = random.sample(
+            range(len(base_fragment_nodes)),
+            k=min(num_links, len(base_fragment_nodes))
+        )
+        
+        # Now connect each player's start zone <-> their corresponding main fragment clone
+        for i, human_graph in enumerate(human_graphs):
+            player_nodes = list(human_graph.nodes)
+            player_main_nodes = clone_graphs[i][1]  # the nodes of this player’s cloned main subgraph
+        
+            for p_idx, m_idx in zip(player_connection_indices, main_connection_indices):
+                player_node = player_nodes[p_idx]
+                main_node = player_main_nodes[m_idx]
+                human_graph.add_link(player_node, main_node)
+        
+            world.merge(human_graph)
+
+    return world
