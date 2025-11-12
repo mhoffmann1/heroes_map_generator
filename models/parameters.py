@@ -184,8 +184,8 @@ def meta_zone_attributes(node):
     attrs = {}
 
     # ─── UI positions (4 placeholders, can be ±float, set to empty now)
-    for i in range(1, 5):
-        attrs[f"UI_position_{i}"] = ""
+    #for i in range(1, 5):
+    attrs["UI_position"] = "0 0 0 0"
 
     # ─── Various placeholders
     attrs["zone_faction_force_neutral"] = ""

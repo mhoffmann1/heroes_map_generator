@@ -164,8 +164,10 @@ ZONE_FIELDS = [
     # Misc layout / objects
     "zone_placement", "objects_section",
 
-    # Final batch you added
-    "UI_position_1", "UI_position_2", "UI_position_3", "UI_position_4",
+    "blank_before_ui",  # this will always export as an empty tab
+
+    # UI position in Template generator, road, monster joining and shipyards
+    "UI_position",
     "zone_faction_force_neutral",
     "allow_non_coherent_road",
     "zone_repulsion",
@@ -181,9 +183,6 @@ ZONE_FIELDS = [
     "zone_faction_rule",
     "max_road_block_value",
 
-    # Placeholders to reach 97 exactly (kept empty unless you later define them)
-    "reserved_1",
-    "reserved_2",
 ]
 
 # Sanity check (optional)
