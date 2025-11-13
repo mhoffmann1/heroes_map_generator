@@ -2,18 +2,24 @@
 Generates random templates for Heroes 3 HotA map generator for a more 'random' user experience
 
 # To Do
-- Generate initial values for zones
-- Generate initial values for connections
-- Generate starting areas for players or players + AI
-    - add computer player zones into main graph
-- Generate fair main grid
-- Print template to file
+- Generate initial values for zones - DONE
+- Generate initial values for connections - DONE
+- Generate starting areas for players or players + AI - DONE
+    - add computer player zones into main graph - DONE
+- Generate fair main grid - DONE
+- Print template to file - DONE
 - generate template values
 - starting zones connect to main branch using same node - DONE
+- starting zones and AI zones in balanced mode use same Link attributes - DONE
+- Global AI players use fair Links
+- balanced mode has a chance for a star NODE connecting to all base fragments
+- starting areas for Humans - add rules for origin castle (same/different)
 
 # Variables description
 
-## mines
+## Nodes
+
+### mines
 
 Next batch of variables:
 
@@ -42,7 +48,7 @@ crystals-density
 gems_density
 gold_density
 
-## terrain and monsters
+### terrain and monsters
 
 Another batch of parameters:
 terrain_match_town - 1 in START zone, in any other zone, if neutral_towns_min > 0 or neutral_castle_min > 0 it has 80% chance to be 1, else 0
@@ -51,7 +57,7 @@ monster_strenght - possible values are 0-3. Should be 2 for START zone. 80% to b
 monster_match_town - 0 in START zone, in any other zone, if neutral_towns_min > 0 or neutral_castle_min > 0 it has 10% chance to be 1, else 0
 allowed_monster_type[1-12] - twelve variables for possible allowed monster types. Placeholder for future use. All set to 1
 
-## treasures
+### treasures
 
 * treasure1_low - 500 for START and NEUTRAL zone, 3000 for TREASURE, 10000 for SUPER_TREASURE
 * treasure1_high - 3000 for START and NEUTRAL zone, 6000 for TREASURE, 15000 for SUPER_TREASURE
@@ -70,7 +76,7 @@ All low/high values above should be slightly randomized (+/- 10%, but should rem
 * zone_placement - set to 0
 * objects_section - should be empty
 
-## Misc
+### Misc
 
 final batch of parameters for zones:
 
@@ -91,3 +97,24 @@ final batch of parameters for zones:
 * max_road_block_value - 4000 for START zone, otherwise empty
 
 monster_disposition, joining_percent and join_only_for_money variables should have an option to be provided manually during script execution - in such case the provided value should overwrite the default value provided here
+
+## Links
+
+Variables in order of appearance:
+'-' means empty (/t) value
+Starts right after Zones section, on 2nd line of Zones
+
+* Zone A (int)
+* Zone B (int)
+* guard_strenght - integer. If one of the zones is START zone then: 3000 - 4000 if the other one is NEUTRAL or JUNCTION, 5000 - 7000 if TREASURE, 8000-12000 if SUPER_TREASURE. It should also be +3000 if the connection happens to be between player starting area and main part of the map if possible. 
+for all other connection between zones. Rule of thumb is: the more valuable the ZONES, the higher number, and it should be especially high if one of the zone is NEUTRAL and the other is SUPER_TREASURE. Max value should be 25000 
+* connection_type_wide - always empty if one of the zones is SUPER_TREASURE, otherwise, 90% to be empty, otherwise '1'
+* connection_type_borderguard - always empty
+* roads - '+' if one of the zones is START, otherwise 75% chance to be '+', 25% to be '-'
+* placement_hint - should be set to 'random'
+* connection_type_fictive - always empty
+* monolith_repulsion - 20% to be 1, otherwise empty
+* human_players_min - 1
+* human_players_max - 8
+* total_players_min - 2
+* total_players_max - 8
