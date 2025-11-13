@@ -47,13 +47,29 @@ class Graph:
     def add_node(self, node):
         self.nodes.append(node)
 
+    #def add_link(self, node_a, node_b, is_player_to_main=False):
+    #    if not self.nodes_connected(node_a, node_b):
+    #        link = Link(node_a, node_b, is_player_to_main=is_player_to_main)
+    #        node_a.add_link(link)
+    #        node_b.add_link(link)
+    #        self.links.append(link)
+    #        return link
+        
+    # This fixes an issue if link already exists
     def add_link(self, node_a, node_b, is_player_to_main=False):
-        if not self.nodes_connected(node_a, node_b):
-            link = Link(node_a, node_b, is_player_to_main=is_player_to_main)
-            node_a.add_link(link)
-            node_b.add_link(link)
-            self.links.append(link)
-            return link
+        # If the link already exists → return it
+        for link in self.links:
+            if (link.node_a is node_a and link.node_b is node_b) or \
+               (link.node_a is node_b and link.node_b is node_a):
+                return link
+
+        # Otherwise create a new link
+        link = Link(node_a, node_b, is_player_to_main=is_player_to_main)
+        node_a.add_link(link)
+        node_b.add_link(link)
+        self.links.append(link)
+        return link
+
 
     def nodes_connected(self, node_a, node_b):
         return any(

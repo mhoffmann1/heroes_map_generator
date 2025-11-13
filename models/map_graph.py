@@ -339,23 +339,18 @@ def generate_world(
                 node.node_type = NodeType.SUPER_TREASURE
         assign_zone_attributes(node)
 
-    # ───────────────────────────────────────────────
-    # Assign link attributes ONCE for the template graph
-    # ───────────────────────────────────────────────
+
+    # Assign link attributes once for the template graph
     for link in template_graph.links:
         assign_link_attributes(link)
 
-    # ───────────────────────────────────────────────
     # Keep a reference to the template START node (for AI cloning)
-    # ───────────────────────────────────────────────
     if num_ai_players:
         tmpl_start = next((n for n in template_graph.nodes if n.node_type == NodeType.START), None)
         if tmpl_start is None:
             raise RuntimeError("Template graph did not produce a START node — this should not happen.")
 
-    # ───────────────────────────────────────────────
     # Clone template for each human player
-    # ───────────────────────────────────────────────
     human_graphs = []
     for p in range(1, num_human_players + 1):
         nodes_map = {}
@@ -445,6 +440,13 @@ def generate_world(
             k=min(num_links, len(base_fragment_nodes))
         )
         
+        # --- Precompute attributes for player->main links ---
+        PLAYER_MAIN_LINK_ATTRS = []
+        for _ in player_connection_indices:
+            dummy = Link(Node(-1), Node(-2), is_player_to_main=True)
+            assign_link_attributes(dummy)
+            PLAYER_MAIN_LINK_ATTRS.append(dict(dummy.attributes))
+
         # Now connect each player's start zone <-> their corresponding main fragment clone
         for i, human_graph in enumerate(human_graphs):
             player_nodes = list(human_graph.nodes)
@@ -453,9 +455,14 @@ def generate_world(
             for p_idx, m_idx in zip(player_connection_indices, main_connection_indices):
                 player_node = player_nodes[p_idx]
                 main_node = player_main_nodes[m_idx]
-                human_graph.add_link(player_node, main_node, is_player_to_main=True)
-        
+                link = human_graph.add_link(player_node, main_node, is_player_to_main=True)
+
+                # Use template attributes for this specific link index
+                template_index = player_connection_indices.index(p_idx)
+                link.attributes = dict(PLAYER_MAIN_LINK_ATTRS[template_index])
+                
             world.merge(human_graph)
+
     assign_all_link_attributes(world)
     sanity_check_links(world)
     return world
