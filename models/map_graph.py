@@ -2,7 +2,7 @@ import random
 from itertools import combinations
 
 from models.objects import Graph, Node, NodeType
-from models.parameters import assign_zone_attributes, assign_all_link_attributes, sanity_check_links
+from models.parameters import assign_zone_attributes, assign_all_link_attributes, sanity_check_links, assign_link_attributes
 
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
@@ -80,7 +80,7 @@ def _generate_main_graph_balanced(
     fragment_size = int(random.randint(*main_zone_nodes) / num_players)
     base_fragment = generate_subgraph(
         fragment_size, id_start=current_id, avg_links_per_node=avg_links_main
-    )
+    )    
     current_id += fragment_size
 
     for node in base_fragment.nodes:
@@ -94,6 +94,10 @@ def _generate_main_graph_balanced(
         else:
             node.node_type = NodeType.SUPER_TREASURE
         assign_zone_attributes(node)
+
+    # Generate parameters for links in the base_fragment
+    for link in base_fragment.links:
+        assign_link_attributes(link)
 
     # Clone fragment for each human player
     clone_graphs = []
@@ -110,9 +114,11 @@ def _generate_main_graph_balanced(
             new_nodes.append(new_n)
             current_id += 1
 
-        # Recreate internal links
+        # Recreate internal links and their attributes
         for l in base_fragment.links:
-            g.add_link(nodes_map[l.node_a.id], nodes_map[l.node_b.id])
+            new_link = g.add_link(nodes_map[l.node_a.id], nodes_map[l.node_b.id])
+            if hasattr(l, "attributes"):
+                new_link.attributes = dict(l.attributes)
 
         clone_graphs.append((g, new_nodes))
 
@@ -234,13 +240,12 @@ def generate_world(
 
     # 1) Generate main graph by style
     if map_style.lower() == "balanced":
-        # ───────────────────────────────────────────────
-        # BALANCED MAP GENERATION
-        # ───────────────────────────────────────────────
+        # Balanced map generation
         main_graph, num_main_nodes, player_connection_indices, clone_graphs, base_fragment, current_id = _generate_main_graph_balanced(
-    main_zone_nodes, current_id, avg_links_main, num_players=num_human_players, num_ai_players=num_ai_players
-)
+            main_zone_nodes, current_id, avg_links_main, num_players=num_human_players, num_ai_players=num_ai_players
+        )
     else:
+        # Random map generation
         main_graph, num_main_nodes = _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main)
         current_id += num_main_nodes
         
@@ -249,7 +254,9 @@ def generate_world(
     template_graph = generate_subgraph(
         num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
     )
+
     # Assign node types & attributes for template (identical across all humans)
+
     for node in template_graph.nodes:
         if node.is_start:
             node.node_type = NodeType.START
@@ -262,17 +269,29 @@ def generate_world(
             else:
                 node.node_type = NodeType.SUPER_TREASURE
         assign_zone_attributes(node)
+
+    # ───────────────────────────────────────────────
+    # Assign link attributes ONCE for the template graph
+    # ───────────────────────────────────────────────
+    for link in template_graph.links:
+        assign_link_attributes(link)
+
+    # ───────────────────────────────────────────────
     # Keep a reference to the template START node (for AI cloning)
+    # ───────────────────────────────────────────────
     if num_ai_players:
         tmpl_start = next((n for n in template_graph.nodes if n.node_type == NodeType.START), None)
         if tmpl_start is None:
             raise RuntimeError("Template graph did not produce a START node — this should not happen.")
-    
+
+    # ───────────────────────────────────────────────
     # Clone template for each human player
+    # ───────────────────────────────────────────────
     human_graphs = []
     for p in range(1, num_human_players + 1):
         nodes_map = {}
         copied_nodes = []
+
         for n in template_graph.nodes:
             new_node = Node(
                 current_id,
@@ -286,14 +305,21 @@ def generate_world(
             nodes_map[n.id] = new_node
             copied_nodes.append(new_node)
             current_id += 1
+
         g = Graph()
         for n in copied_nodes:
             g.add_node(n)
+
+        # Recreate links AND clone their attributes
         for l in template_graph.links:
             a = nodes_map[l.node_a.id]
             b = nodes_map[l.node_b.id]
-            g.add_link(a, b)
+            new_link = g.add_link(a, b)
+            if hasattr(l, "attributes"):
+                new_link.attributes = dict(l.attributes)
+
         human_graphs.append(g)
+
 
     # 4) Prepare world & connect human areas to main graph
     world = Graph()

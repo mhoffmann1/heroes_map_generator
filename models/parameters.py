@@ -291,6 +291,9 @@ def assign_all_link_attributes(graph):
     Honors pre-marked player→main links.
     """
     for link in graph.links:
+        # skip links that already have attributes - they are either player zones or set manualy. Should not be overwritten
+        if link.attributes:
+            continue
         assign_link_attributes(link, is_player_to_main=link.is_player_to_main)
 
 def assign_link_attributes(link, is_player_to_main=False):

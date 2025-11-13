@@ -53,6 +53,7 @@ class Graph:
             node_a.add_link(link)
             node_b.add_link(link)
             self.links.append(link)
+            return link
 
     def nodes_connected(self, node_a, node_b):
         return any(
