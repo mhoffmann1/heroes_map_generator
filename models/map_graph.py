@@ -147,7 +147,7 @@ def _generate_main_graph_balanced(
             (a_idx, b_idx, dict(dummy_link.attributes))
         )
 
-    # Apply the SAME pattern + attributes to each fragment pair
+    # Apply the same pattern + attributes to each fragment pair
     for i in range(num_players):
         next_i = (i + 1) % num_players
 
@@ -157,6 +157,8 @@ def _generate_main_graph_balanced(
         for a_idx, b_idx, attrs in template_cross_links:
             node_a = nodes_i[a_idx]
             node_b = nodes_next[b_idx]
+
+            print(f"g_i {g_i} Node_a {node_a}; Node_b {node_b}")
 
             # Create the actual link between fragments i and next_i
             link = g_i.add_link(node_a, node_b)
@@ -187,6 +189,15 @@ def _generate_main_graph_balanced(
     # Predefine which nodes will be used for AI connections (same pattern everywhere)
     ai_connection_indices = random.sample(possible_indices, k=min(2, fragment_size))
     
+    # Precompute link attributes for embedded AIs (same for all)
+    EMBEDDED_AI_LINK_ATTRS = []
+
+    for idx in ai_connection_indices:
+        # dummy link uses any nodes, doesn't matter
+        dummy_link = Link(Node(-1), Node(-2))
+        assign_link_attributes(dummy_link)
+        EMBEDDED_AI_LINK_ATTRS.append(dict(dummy_link.attributes))
+
     # Embedded AIs (if enough AIs for one per player)
     if num_ai_players >= num_players:
         print(f"[DEBUG] Adding embedded AIs with connection indices {ai_connection_indices}")
@@ -212,10 +223,15 @@ def _generate_main_graph_balanced(
             frag_graph, frag_nodes = clone_graphs[i]
             frag_graph.add_node(ai_node)
 
-            # Symmetrical connections for embedded AIs
-            for idx in ai_connection_indices:
+            # Symmetrical connections for embedded AIs with identical link attributes
+            for template_attr, idx in zip(EMBEDDED_AI_LINK_ATTRS, ai_connection_indices):
                 target = frag_nodes[idx % len(frag_nodes)]
-                frag_graph.add_link(ai_node, target)
+
+                link = frag_graph.add_link(ai_node, target)
+
+                # Copy template attributes (LOCKED)
+                link.attributes = dict(template_attr)
+
 
             frag_nodes.append(ai_node)
     
@@ -223,10 +239,10 @@ def _generate_main_graph_balanced(
     remaining_ais = num_ai_players - ai_used
     if remaining_ais > 0:
         print(f"[DEBUG] Adding {remaining_ais} global AIs with connection indices {ai_connection_indices}")
-    
+
         for _ in range(remaining_ais):
             ai_owner = num_players + ai_used + 1
-    
+
             ai_node = Node(
                 current_id,
                 node_type=NodeType.START,
@@ -235,20 +251,20 @@ def _generate_main_graph_balanced(
             )
             current_id += 1
             ai_used += 1
-    
+
             # Global AI gets fresh randomized START zone attributes
             ai_node.attributes = {}
             assign_zone_attributes(ai_node)
             ai_node.attributes["player_control"] = ai_owner
-    
+
             ai_nodes_all.append(ai_node)
-    
+
             # Connect globally to all fragments symmetrically
             for frag_graph, frag_nodes in clone_graphs:
                 for idx in ai_connection_indices:
                     target = frag_nodes[idx % len(frag_nodes)]
                     frag_graph.add_link(ai_node, target)
-    
+
             # Put it into the first fragment so it gets merged
             clone_graphs[0][0].add_node(ai_node)
     
