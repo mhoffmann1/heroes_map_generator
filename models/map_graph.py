@@ -1,7 +1,7 @@
 import random
 from itertools import combinations
 
-from models.objects import Graph, Node, NodeType
+from models.objects import Graph, Node, NodeType, Link
 from models.parameters import assign_zone_attributes, assign_all_link_attributes, sanity_check_links, assign_link_attributes
 
 
@@ -123,14 +123,45 @@ def _generate_main_graph_balanced(
         clone_graphs.append((g, new_nodes))
 
     # Connect fragments in mirrored pattern
+    base_count = len(base_fragment.nodes)
+
+    # Random number of cross-links: between 2 and number of fragment nodes (if possible)
+    if base_count <= 1:
+        num_cross_links = 1
+    else:
+        num_cross_links = random.randint(2, base_count)
+
     base_nodes = list(base_fragment.nodes)
-    connection_indices = random.sample(range(len(base_nodes)), k=min(2, len(base_nodes)))
+
+    # Build template: (from_idx, to_idx, attrs_dict)
+    template_cross_links = []
+    for _ in range(num_cross_links):
+        a_idx = random.randrange(base_count)
+        b_idx = random.randrange(base_count)
+
+        # Create a dummy link on the base fragment just to compute attributes
+        dummy_link = Link(base_nodes[a_idx], base_nodes[b_idx])
+        assign_link_attributes(dummy_link)
+
+        template_cross_links.append(
+            (a_idx, b_idx, dict(dummy_link.attributes))
+        )
+
+    # Apply the SAME pattern + attributes to each fragment pair
     for i in range(num_players):
         next_i = (i + 1) % num_players
-        for idx in connection_indices:
-            node_a = clone_graphs[i][1][idx]
-            node_b = clone_graphs[next_i][1][idx]
-            clone_graphs[i][0].add_link(node_a, node_b)
+
+        g_i, nodes_i      = clone_graphs[i]
+        g_next, nodes_next = clone_graphs[next_i]
+
+        for a_idx, b_idx, attrs in template_cross_links:
+            node_a = nodes_i[a_idx]
+            node_b = nodes_next[b_idx]
+
+            # Create the actual link between fragments i and next_i
+            link = g_i.add_link(node_a, node_b)
+            # Copy the precomputed attributes so all such links are identical
+            link.attributes = dict(attrs)
 
     # Define indices for connecting player starting zones
     fragment_node_indices = list(range(len(base_fragment.nodes)))
