@@ -237,6 +237,14 @@ def _generate_main_graph_balanced(
     
     # Global AIs (remaining or all)
     remaining_ais = num_ai_players - ai_used
+    
+    # --- Precompute symmetrical link attributes for Global AI connections ---
+    GLOBAL_AI_LINK_ATTRS = []
+    for _ in ai_connection_indices:
+        dummy = Link(Node(-1), Node(-2))
+        assign_link_attributes(dummy)
+        GLOBAL_AI_LINK_ATTRS.append(dict(dummy.attributes))
+
     if remaining_ais > 0:
         print(f"[DEBUG] Adding {remaining_ais} global AIs with connection indices {ai_connection_indices}")
 
@@ -261,9 +269,12 @@ def _generate_main_graph_balanced(
 
             # Connect globally to all fragments symmetrically
             for frag_graph, frag_nodes in clone_graphs:
-                for idx in ai_connection_indices:
+                for pos, idx in enumerate(ai_connection_indices):
                     target = frag_nodes[idx % len(frag_nodes)]
-                    frag_graph.add_link(ai_node, target)
+                    link = frag_graph.add_link(ai_node, target)
+
+                    # Apply symmetrical template attributes
+                    link.attributes = dict(GLOBAL_AI_LINK_ATTRS[pos])
 
             # Put it into the first fragment so it gets merged
             clone_graphs[0][0].add_node(ai_node)
@@ -389,6 +400,7 @@ def generate_world(
     world = Graph()
     world.merge(main_graph)
 
+    # Random map post config
     if map_style.lower() == "random":
         # Choose connection indices ONCE from the template (can be same index twice)
         template_nodes = list(template_graph.nodes)
@@ -422,6 +434,8 @@ def generate_world(
             world.merge(ai_graph)
             current_id += 1
             next_owner += 1
+
+    # Balanced map post config
     else:    
         # All players share the same pattern of start/main connections
         num_links = random.choice([2, 3])

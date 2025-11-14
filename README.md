@@ -14,6 +14,7 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 - Global AI players use fair Links
 - balanced mode has a chance for a star NODE connecting to all base fragments
 - starting areas for Humans - add rules for origin castle (same/different)
+- change monster strenght for zones that connect with JUNCTION
 
 # Variables description
 
