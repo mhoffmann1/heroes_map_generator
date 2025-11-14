@@ -327,10 +327,6 @@ def assign_link_attributes(link, is_player_to_main=False):
         else:
             guard_strength = random.randint(2500, 3500)
 
-        # Add bonus for connection to main world
-        if is_player_to_main:
-            guard_strength += random.randint(3000, 6000)
-
     # All other (non-start) combinations
     else:
         # Simple heuristic matrix
@@ -348,14 +344,22 @@ def assign_link_attributes(link, is_player_to_main=False):
                 return (15000, 25000)
             if NodeType.JUNCTION in combo:
                 return (10000, 20000)
+            if is_player_to_main:
+                return (6000, 9000)
             # fallback
             return (2000, 4000)
 
         low, high = strength_range(a_type, b_type)
         guard_strength = random.randint(low, high)
 
+    # Add bonus for connection to main world
+    if is_player_to_main:
+        guard_strength += random.randint(3000, 6000)
+
     # Cap at 25 000
     attrs["guard_strength"] = min(guard_strength, 25000)
+
+    
 
     # ───────────────────────────────
     # CONNECTION TYPE: WIDE

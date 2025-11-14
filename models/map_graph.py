@@ -416,7 +416,8 @@ def generate_world(
             main_targets = random.sample(list(main_graph.nodes), 2)
             for conn_idx, target in zip(connection_indices, main_targets):
                 connection_node = player_nodes[conn_idx]
-                human_graph.add_link(connection_node, target, is_player_to_main=True)
+                link = human_graph.add_link(connection_node, target, is_player_to_main=True)
+                assign_link_attributes(link, is_player_to_main=True)
             world.merge(human_graph)
         # 5) Create AI players: each gets a single START node cloned from the template START
         #    and connects to main graph with 2 links
@@ -458,7 +459,7 @@ def generate_world(
         PLAYER_MAIN_LINK_ATTRS = []
         for _ in player_connection_indices:
             dummy = Link(Node(-1), Node(-2), is_player_to_main=True)
-            assign_link_attributes(dummy)
+            assign_link_attributes(dummy, is_player_to_main=True)
             PLAYER_MAIN_LINK_ATTRS.append(dict(dummy.attributes))
 
         # Now connect each player's start zone <-> their corresponding main fragment clone
