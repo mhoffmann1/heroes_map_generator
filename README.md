@@ -21,14 +21,6 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 
 ### mines
 
-- Generate initial values
-- Generate starting areas for players or players + AI
-- Generate fair main grid
-- Print template to file
-- generate template values
-
-# Variables description
-
 Next batch of variables:
 
 wood_min
@@ -126,4 +118,3 @@ for all other connection between zones. Rule of thumb is: the more valuable the 
 * human_players_max - 8
 * total_players_min - 2
 * total_players_max - 8
-gold_density
