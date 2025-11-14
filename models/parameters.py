@@ -341,13 +341,13 @@ def assign_link_attributes(link, is_player_to_main=False):
             if combo == {NodeType.NEUTRAL, NodeType.TREASURE}:
                 return (5000, 8000)
             if combo == {NodeType.TREASURE}:
-                return (8000, 10000)
+                return (10000, 12000)
             if combo == {NodeType.TREASURE, NodeType.SUPER_TREASURE}:
-                return (10000, 15000)
+                return (12000, 20000)
             if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE}:
                 return (15000, 25000)
             if NodeType.JUNCTION in combo:
-                return (3000, 7000)
+                return (10000, 20000)
             # fallback
             return (2000, 4000)
 
