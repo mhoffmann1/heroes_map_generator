@@ -279,6 +279,48 @@ def _generate_main_graph_balanced(
             # Put it into the first fragment so it gets merged
             clone_graphs[0][0].add_node(ai_node)
     
+    # optional central node
+    if random.random() < 0.5:
+        # Decide central node type: 30% Treasure, 70% Super-treasure
+        roll = random.random()
+        if roll < 0.30:
+            central_type = NodeType.TREASURE
+        else:
+            central_type = NodeType.SUPER_TREASURE
+
+        central_node = Node(
+            current_id,
+            node_type=central_type,
+            owner=None,
+            is_start=False
+        )
+        current_id += 1
+
+        # Randomize zone attributes for the central node
+        assign_zone_attributes(central_node)
+
+        # Pick symmetrical indices inside each fragment (one per fragment)
+        fragment_size = len(clone_graphs[0][1])
+        idx = random.randrange(fragment_size)     # one index for all fragments
+
+        # Precompute symmetrical link attributes
+        dummy = Link(Node(-1, node_type=central_type), Node(-2))
+        assign_link_attributes(dummy)
+        CENTRAL_LINK_ATTRS = dict(dummy.attributes)
+
+        # Connect central node to each fragment
+        for frag_graph, frag_nodes in clone_graphs:
+            target = frag_nodes[idx % len(frag_nodes)]
+
+            link = frag_graph.add_link(central_node, target)
+
+            # Symmetrical link attributes
+            link.attributes = dict(CENTRAL_LINK_ATTRS)
+
+        # Insert central node into FIRST fragment so that merge() picks it up
+        clone_graphs[0][0].add_node(central_node)
+
+
     # Merge all fragments into unified main graph
     main_graph = Graph()
     for g, _ in clone_graphs:

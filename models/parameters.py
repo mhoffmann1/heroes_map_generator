@@ -334,19 +334,20 @@ def assign_link_attributes(link, is_player_to_main=False):
             combo = {a_t, b_t}
             if combo == {NodeType.NEUTRAL}:
                 return (2000, 4000)
-            if combo == {NodeType.NEUTRAL, NodeType.TREASURE}:
-                return (5000, 8000)
+            if combo == {NodeType.NEUTRAL, NodeType.TREASURE} or combo == {NodeType.TREASURE, None}:
+                return (6000, 9000)
             if combo == {NodeType.TREASURE}:
                 return (10000, 12000)
             if combo == {NodeType.TREASURE, NodeType.SUPER_TREASURE}:
                 return (12000, 20000)
-            if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE}:
+            if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE} or combo == {NodeType.SUPER_TREASURE, None}:
                 return (15000, 25000)
             if NodeType.JUNCTION in combo:
                 return (10000, 20000)
             if is_player_to_main:
                 return (6000, 9000)
             # fallback
+            print(f"[DEBUG] Unable to determine Link type based on node type: {a_t} {b_t}")
             return (2000, 4000)
 
         low, high = strength_range(a_type, b_type)
