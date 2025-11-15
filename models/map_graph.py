@@ -38,9 +38,8 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
 
     return g
 
-# ───────────────────────────────────────────────
+
 # Helpers to build main graph by style
-# ───────────────────────────────────────────────
 def _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main):
     num_main_nodes = random.randint(*main_zone_nodes)
     main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
@@ -336,9 +335,7 @@ def _generate_main_graph_balanced(
         current_id
     )
 
-# ───────────────────────────────────────────────
 # Core world generation with human + AI players + map style
-# ───────────────────────────────────────────────
 def generate_world(
     num_human_players=3,
     num_ai_players=0,

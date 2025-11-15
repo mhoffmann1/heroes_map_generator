@@ -3,7 +3,7 @@ import random
 
 from config import MANUAL_OVERRIDES
 from utils.input_output import build_world_interactive, visualize_graph
-from utils.export import export_to_h3t
+from utils.export import export_to_h3t, generate_h3t_file
 
 # Optional visualization libraries
 try:
@@ -30,9 +30,11 @@ if __name__ == "__main__":
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
     #world = generate_world(num_players=3)
-    world = build_world_interactive()
+    template_filename, human_players, ai_players, world = build_world_interactive()
     world.display()
+
+    generate_h3t_file(num_humans=human_players, num_ais=ai_players, output_path=template_filename)
 
     visualize_graph(world)
 
-    export_to_h3t(world)
+    export_to_h3t(world, filename=template_filename)

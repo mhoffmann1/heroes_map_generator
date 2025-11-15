@@ -61,9 +61,11 @@ def build_world_interactive():
     ai_nodes = [n for n in world.nodes if n.node_type == NodeType.START and n.owner > num_humans]
     print(f"[DEBUG] AI nodes in final world: {len(ai_nodes)}")
     for n in ai_nodes:
-        print(f"  AI#{n.owner} – ID {n.id}")
+        print(f"  AI#{n.owner} – ID {n.id}.h3t")
 
-    return world
+    template_file = f"{map_style}_H{num_humans}_{num_ai}CP.h3t"
+
+    return template_file, num_humans, num_ai, world
 
 
 # ───────────────────────────────────────────────
