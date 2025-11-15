@@ -1,5 +1,91 @@
-from config import NodeType
-from config import ZONE_FIELDS, LINK_FIELDS
+import random
+from datetime import datetime
+
+from config import LINK_FIELDS, ZONE_FIELDS, NodeType
+
+
+def generate_h3t_file(
+        num_humans,
+        num_ais,
+        source_path="h3t_source.h3t", 
+        output_path="output.h3t",
+        disable_special_weeks=None,
+        anarchy=None,
+        ):
+    """
+    Generates a full .h3t template file using:
+    - A static base template (h3t_source.h3t)
+    - Auto-generated template attributes appended as one TAB-separated line
+    """
+
+    # --------------------------------------------------------
+    # 1. Load static header from source file
+    # --------------------------------------------------------
+    with open(source_path, "r", encoding="utf-8") as src:
+        base_content = src.read()
+
+    # --------------------------------------------------------
+    # 2. Compute dynamic values
+    # --------------------------------------------------------
+    # Template pack / name
+    today = datetime.now().strftime("%Y%m%d")
+    template_pack_name = f"{today}_balanced_H{num_humans}_C{num_ais}"
+    template_pack_dsc = "template generated using automation"
+
+    # Randomized fields
+    zone_sparsness = round(random.uniform(0.8, 1.5), 3)  # float
+    if disable_special_weeks is None:
+        disable_special_weeks = random.choice(["", "x"])
+    if anarchy is None:
+        anarchy = random.choice(["", "x"])
+
+    # --------------------------------------------------------
+    # 3. Prepare attribute line (order EXACTLY as requested)
+    # --------------------------------------------------------
+    values = [
+        11,                  # val1
+        10,                  # val2
+        4,                   # val3
+        8,                   # val4
+        10,                  # val5
+        18,                  # val6
+        4,                   # val7
+        template_pack_name,  # template pack name
+        template_pack_dsc,   # template pack description
+        "",                  # available_castles
+        "+144 +145 +146 +147 +148 +149 +150 +151 +152 +153 +196 +197",
+        "",                  # mirror_template
+        "",                  # empty
+        100,                 # max_battle_rounds
+        "",                  # empty
+        template_pack_name,  # template_name
+        32,                  # min_size
+        99,                  # max_size
+        "",                  # available_artifacts
+        "+1 ",               # available_comb_artifacts
+        "",                  # available_spells
+        "",                  # available_secondary_skills
+        "-88 3",             # disable_objects
+        "",                  # rock_block_radius
+        zone_sparsness,      # zone_sparsness
+        disable_special_weeks,
+        "x",                 # allow_spell_research
+        anarchy
+    ]
+
+    # Convert everything to strings and join with TAB
+    attribute_line = "\t".join(str(v) for v in values)
+
+    # --------------------------------------------------------
+    # 4. Write the final output file
+    # --------------------------------------------------------
+    with open(output_path, "w", encoding="utf-8") as out:
+        out.write(base_content.rstrip("\n"))
+        out.write("\n")             # ensure separation
+        out.write(attribute_line)   # append generated attributes
+        out.write("\n")
+
+    print(f"[OK] Generated {output_path}")
 
 
 def export_to_h3t(world, filename="generated_template.h3t"):
@@ -67,7 +153,7 @@ def export_to_h3t(world, filename="generated_template.h3t"):
         line = zone_str + link_str
         lines.append(line)
 
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(filename, "a", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
 
     print(f"[OK] Exported world to {filename}")

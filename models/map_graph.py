@@ -38,9 +38,8 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
 
     return g
 
-# ───────────────────────────────────────────────
+
 # Helpers to build main graph by style
-# ───────────────────────────────────────────────
 def _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main):
     num_main_nodes = random.randint(*main_zone_nodes)
     main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
@@ -237,6 +236,14 @@ def _generate_main_graph_balanced(
     
     # Global AIs (remaining or all)
     remaining_ais = num_ai_players - ai_used
+    
+    # --- Precompute symmetrical link attributes for Global AI connections ---
+    GLOBAL_AI_LINK_ATTRS = []
+    for _ in ai_connection_indices:
+        dummy = Link(Node(-1), Node(-2))
+        assign_link_attributes(dummy)
+        GLOBAL_AI_LINK_ATTRS.append(dict(dummy.attributes))
+
     if remaining_ais > 0:
         print(f"[DEBUG] Adding {remaining_ais} global AIs with connection indices {ai_connection_indices}")
 
@@ -261,13 +268,58 @@ def _generate_main_graph_balanced(
 
             # Connect globally to all fragments symmetrically
             for frag_graph, frag_nodes in clone_graphs:
-                for idx in ai_connection_indices:
+                for pos, idx in enumerate(ai_connection_indices):
                     target = frag_nodes[idx % len(frag_nodes)]
-                    frag_graph.add_link(ai_node, target)
+                    link = frag_graph.add_link(ai_node, target)
+
+                    # Apply symmetrical template attributes
+                    link.attributes = dict(GLOBAL_AI_LINK_ATTRS[pos])
 
             # Put it into the first fragment so it gets merged
             clone_graphs[0][0].add_node(ai_node)
     
+    # optional central node
+    if random.random() < 0.5:
+        # Decide central node type: 30% Treasure, 70% Super-treasure
+        roll = random.random()
+        if roll < 0.30:
+            central_type = NodeType.TREASURE
+        else:
+            central_type = NodeType.SUPER_TREASURE
+
+        central_node = Node(
+            current_id,
+            node_type=central_type,
+            owner=None,
+            is_start=False
+        )
+        current_id += 1
+
+        # Randomize zone attributes for the central node
+        assign_zone_attributes(central_node)
+
+        # Pick symmetrical indices inside each fragment (one per fragment)
+        fragment_size = len(clone_graphs[0][1])
+        idx = random.randrange(fragment_size)     # one index for all fragments
+
+        # Precompute symmetrical link attributes
+        dummy = Link(Node(-1, node_type=central_type), Node(-2))
+        assign_link_attributes(dummy)
+        CENTRAL_LINK_ATTRS = dict(dummy.attributes)
+
+        # Connect central node to each fragment
+        for frag_graph, frag_nodes in clone_graphs:
+            target = frag_nodes[idx % len(frag_nodes)]
+
+            link = frag_graph.add_link(central_node, target)
+
+            # Symmetrical link attributes
+            link.attributes = dict(CENTRAL_LINK_ATTRS)
+
+        # Insert central node into FIRST fragment so that merge() picks it up
+        clone_graphs[0][0].add_node(central_node)
+
+
     # Merge all fragments into unified main graph
     main_graph = Graph()
     for g, _ in clone_graphs:
@@ -283,9 +335,7 @@ def _generate_main_graph_balanced(
         current_id
     )
 
-# ───────────────────────────────────────────────
 # Core world generation with human + AI players + map style
-# ───────────────────────────────────────────────
 def generate_world(
     num_human_players=3,
     num_ai_players=0,
@@ -389,6 +439,7 @@ def generate_world(
     world = Graph()
     world.merge(main_graph)
 
+    # Random map post config
     if map_style.lower() == "random":
         # Choose connection indices ONCE from the template (can be same index twice)
         template_nodes = list(template_graph.nodes)
@@ -404,7 +455,8 @@ def generate_world(
             main_targets = random.sample(list(main_graph.nodes), 2)
             for conn_idx, target in zip(connection_indices, main_targets):
                 connection_node = player_nodes[conn_idx]
-                human_graph.add_link(connection_node, target, is_player_to_main=True)
+                link = human_graph.add_link(connection_node, target, is_player_to_main=True)
+                assign_link_attributes(link, is_player_to_main=True)
             world.merge(human_graph)
         # 5) Create AI players: each gets a single START node cloned from the template START
         #    and connects to main graph with 2 links
@@ -422,6 +474,8 @@ def generate_world(
             world.merge(ai_graph)
             current_id += 1
             next_owner += 1
+
+    # Balanced map post config
     else:    
         # All players share the same pattern of start/main connections
         num_links = random.choice([2, 3])
@@ -444,7 +498,7 @@ def generate_world(
         PLAYER_MAIN_LINK_ATTRS = []
         for _ in player_connection_indices:
             dummy = Link(Node(-1), Node(-2), is_player_to_main=True)
-            assign_link_attributes(dummy)
+            assign_link_attributes(dummy, is_player_to_main=True)
             PLAYER_MAIN_LINK_ATTRS.append(dict(dummy.attributes))
 
         # Now connect each player's start zone <-> their corresponding main fragment clone

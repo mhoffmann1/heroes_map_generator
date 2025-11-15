@@ -327,10 +327,6 @@ def assign_link_attributes(link, is_player_to_main=False):
         else:
             guard_strength = random.randint(2500, 3500)
 
-        # Add bonus for connection to main world
-        if is_player_to_main:
-            guard_strength += random.randint(3000, 6000)
-
     # All other (non-start) combinations
     else:
         # Simple heuristic matrix
@@ -338,24 +334,33 @@ def assign_link_attributes(link, is_player_to_main=False):
             combo = {a_t, b_t}
             if combo == {NodeType.NEUTRAL}:
                 return (2000, 4000)
-            if combo == {NodeType.NEUTRAL, NodeType.TREASURE}:
-                return (5000, 8000)
+            if combo == {NodeType.NEUTRAL, NodeType.TREASURE} or combo == {NodeType.TREASURE, None}:
+                return (6000, 9000)
             if combo == {NodeType.TREASURE}:
-                return (8000, 10000)
+                return (10000, 12000)
             if combo == {NodeType.TREASURE, NodeType.SUPER_TREASURE}:
-                return (10000, 15000)
-            if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE}:
+                return (12000, 20000)
+            if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE} or combo == {NodeType.SUPER_TREASURE, None}:
                 return (15000, 25000)
             if NodeType.JUNCTION in combo:
-                return (3000, 7000)
+                return (10000, 20000)
+            if is_player_to_main:
+                return (6000, 9000)
             # fallback
+            print(f"[DEBUG] Unable to determine Link type based on node type: {a_t} {b_t}")
             return (2000, 4000)
 
         low, high = strength_range(a_type, b_type)
         guard_strength = random.randint(low, high)
 
+    # Add bonus for connection to main world
+    if is_player_to_main:
+        guard_strength += random.randint(3000, 6000)
+
     # Cap at 25 000
     attrs["guard_strength"] = min(guard_strength, 25000)
+
+    
 
     # ───────────────────────────────
     # CONNECTION TYPE: WIDE

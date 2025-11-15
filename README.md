@@ -11,9 +11,14 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 - generate template values
 - starting zones connect to main branch using same node - DONE
 - starting zones and AI zones in balanced mode use same Link attributes - DONE
-- Global AI players use fair Links
+- Global AI players use fair Links DONE
 - balanced mode has a chance for a star NODE connecting to all base fragments
 - starting areas for Humans - add rules for origin castle (same/different)
+- change monster strenght for zones that connect with JUNCTION - DONE
+
+# Bugs
+
+- is_player_to_main in add_link method in graph is not triggering the right monster values in parameters
 
 # Variables description
 
