@@ -4,7 +4,14 @@ from datetime import datetime
 from config import LINK_FIELDS, ZONE_FIELDS, NodeType
 
 
-def generate_h3t_file(num_humans, num_ais, source_path="h3t_source.h3t", output_path="output.h3t"):
+def generate_h3t_file(
+        num_humans,
+        num_ais,
+        source_path="h3t_source.h3t", 
+        output_path="output.h3t",
+        disable_special_weeks=None,
+        anarchy=None,
+        ):
     """
     Generates a full .h3t template file using:
     - A static base template (h3t_source.h3t)
@@ -27,8 +34,10 @@ def generate_h3t_file(num_humans, num_ais, source_path="h3t_source.h3t", output_
 
     # Randomized fields
     zone_sparsness = round(random.uniform(0.8, 1.5), 3)  # float
-    disable_special_weeks = random.choice(["", "x"])
-    anarchy = random.choice(["", "x"])
+    if disable_special_weeks is None:
+        disable_special_weeks = random.choice(["", "x"])
+    if anarchy is None:
+        anarchy = random.choice(["", "x"])
 
     # --------------------------------------------------------
     # 3. Prepare attribute line (order EXACTLY as requested)

@@ -1,12 +1,10 @@
 import math
+from datetime import datetime
 
+from config import MANUAL_OVERRIDES
 from models.map_graph import generate_world
 from models.objects import NodeType
 
-
-# ───────────────────────────────────────────────
-# Simple interactive entrypoint
-# ───────────────────────────────────────────────
 def _ask_int(prompt, min_val=None, max_val=None):
     while True:
         try:
@@ -30,11 +28,40 @@ def _ask_choice(prompt, choices):
         print(f"Please choose one of: {', '.join(choices)}")
 
 
-def build_world_interactive():
-    # 1) Human players
-    num_humans = _ask_int("Number of HUMAN players (1-8): ", 1, 8)
+def _ask_bool_random(prompt):
+    """
+    Ask user for True / False / Random.
+    Returns: 'x' for True, '' for False, None for Random.
+    """
+    v = _ask_choice(prompt, ["true", "false", "random"])
+    if v == "true":
+        return "x"
+    elif v == "false":
+        return ""
+    else:
+        return None
 
-    # 2) AI players, keep total <= 8
+def _ask_bool(prompt, default_true=True):
+    """
+    Ask user True/False with default.
+    Returns 'x' for True, '' for False.
+    """
+    default = "true" if default_true else "false"
+    v = _ask_choice(f"{prompt} [default={default}]", ["true", "false"])
+    if v == "true":
+        return "x"
+    else:
+        return ""
+
+def build_world_interactive():
+    # 1) MAP STYLE FIRST
+    map_style = _ask_choice("Map style", ["random", "balanced"])
+
+    # 2) Human players (balanced requires >= 2)
+    min_humans = 2 if map_style == "balanced" else 1
+    num_humans = _ask_int(f"Number of HUMAN players ({min_humans}-8): ", min_humans, 8)
+
+    # 3) AI players, ensure total <= 8
     max_ai = 8 - num_humans
     if max_ai == 0:
         print("Maximum total players reached; AI players set to 0.")
@@ -42,12 +69,33 @@ def build_world_interactive():
     else:
         num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
 
-    # 3) Map style
-    map_style = _ask_choice("Map style", ["random", "balanced"])
+    # 4) Disable special weeks?
+    disable_special_weeks = _ask_bool_random("Disable special weeks")
 
-    # Ask about zone numbers and number of links
-    # balanced should require at least 2 Human players
+    # 5) Anarchy?
+    anarchy = _ask_bool_random("Enable anarchy")
 
+    # 6) Joining percent
+    joining_percent = _ask_int(
+        "Monster joining percent: 0=25%, 1=50%, 2=75%, 3=100%, 4=random: ",
+        0, 4
+    )
+    if joining_percent == 4:
+        joining_percent = random.randint(0, 3)
+
+    # 7) Monsters join only for money?
+    join_only_for_money = _ask_bool(
+        "Monsters join only for money?",
+        default_true=True
+    )
+
+    # Store overrides
+    MANUAL_OVERRIDES.update({
+        "joining_percent": joining_percent,
+        "join_only_for_money": join_only_for_money
+    })
+
+    # 8) Generate the world
     world = generate_world(
         num_human_players=num_humans,
         num_ai_players=num_ai,
@@ -58,15 +106,18 @@ def build_world_interactive():
         avg_links_player=2
     )
 
+    # Debug output
     ai_nodes = [n for n in world.nodes if n.node_type == NodeType.START and n.owner > num_humans]
     print(f"[DEBUG] AI nodes in final world: {len(ai_nodes)}")
     for n in ai_nodes:
         print(f"  AI#{n.owner} – ID {n.id}.h3t")
 
-    template_file = f"{map_style}_H{num_humans}_{num_ai}CP.h3t"
+    # Template file name
+    today = datetime.now().strftime("%Y%m%d")
+    template_file = f"{today}_{map_style}_H{num_humans}_{num_ai}CP.h3t"
 
-    return template_file, num_humans, num_ai, world
-
+    # NOW RETURN NEW VARIABLES
+    return template_file, num_humans, num_ai, disable_special_weeks, anarchy, world
 
 # ───────────────────────────────────────────────
 # Small geometry helpers (no extra deps)

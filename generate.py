@@ -1,7 +1,5 @@
-import argparse
 import random
 
-from config import MANUAL_OVERRIDES
 from utils.input_output import build_world_interactive, visualize_graph
 from utils.export import export_to_h3t, generate_h3t_file
 
@@ -15,25 +13,19 @@ except ImportError:
 
 if __name__ == "__main__":
     
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--monster_disposition", type=int, help="Override monster disposition (1–3)")
-    parser.add_argument("--joining_percent", type=float, help="Override joining percent")
-    parser.add_argument("--join_only_for_money", type=str, help="Override join_only_for_money (x or empty)")
-    args = parser.parse_args()
-
-    MANUAL_OVERRIDES.update({
-        "monster_disposition": args.monster_disposition,
-        "joining_percent": args.joining_percent,
-        "join_only_for_money": args.join_only_for_money
-    })
-
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
     #world = generate_world(num_players=3)
-    template_filename, human_players, ai_players, world = build_world_interactive()
+    template_filename, human_players, ai_players, disable_special_weeks, anarchy,world = build_world_interactive()
     world.display()
 
-    generate_h3t_file(num_humans=human_players, num_ais=ai_players, output_path=template_filename)
+    generate_h3t_file(
+        num_humans=human_players,
+        num_ais=ai_players,
+        output_path=template_filename,
+        disable_special_weeks=disable_special_weeks,
+        anarchy=anarchy
+        )
 
     visualize_graph(world)
 
