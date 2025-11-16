@@ -343,7 +343,9 @@ def generate_world(
     main_zone_nodes=(8, 16),
     player_zone_nodes=(3, 4),
     avg_links_main=3,
-    avg_links_player=2
+    avg_links_player=2,
+    num_same_towns_in_start=1,
+    num_diff_towns_in_start=0,
 ):
     """
     Generate full world:
@@ -416,6 +418,7 @@ def generate_world(
             new_node.attributes = dict(n.attributes)
             if new_node.node_type == NodeType.START:
                 new_node.attributes["player_control"] = new_node.owner
+                start_node_id = new_node.id
             nodes_map[n.id] = new_node
             copied_nodes.append(new_node)
             current_id += 1
@@ -431,6 +434,33 @@ def generate_world(
             new_link = g.add_link(a, b)
             if hasattr(l, "attributes"):
                 new_link.attributes = dict(l.attributes)
+
+        # Find potential castle/town nodes (excluding START)
+        town_candidates = []
+        for node in copied_nodes:
+            if node.is_start:
+                continue
+
+            attrs = node.attributes
+
+            # Detect castle/town presence
+            has_town = (
+                attrs.get("neutral_towns_min", 0) > 0 or
+                attrs.get("neutral_castle_min", 0) > 0
+            )
+
+            if has_town:
+                town_candidates.append(node)
+
+        # Assign SAME-town rules (nsXX_p)
+        same = town_candidates[:num_same_towns_in_start]
+        for node in same:
+            node.attributes["town_type_rules"] = f"ns{start_node_id}_p"
+
+        # Assign DIFF-town rules (ndXX_p) to remaining
+        remaining = town_candidates[len(same):len(same) + num_diff_towns_in_start]
+        for node in remaining:
+            node.attributes["town_type_rules"] = f"nd{start_node_id}_p"
 
         human_graphs.append(g)
 

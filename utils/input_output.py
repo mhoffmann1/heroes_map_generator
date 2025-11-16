@@ -1,9 +1,11 @@
 import math
+import random
 from datetime import datetime
 
 from config import MANUAL_OVERRIDES
 from models.map_graph import generate_world
 from models.objects import NodeType
+
 
 def _ask_int(prompt, min_val=None, max_val=None):
     while True:
@@ -53,15 +55,30 @@ def _ask_bool(prompt, default_true=True):
     else:
         return ""
 
+def ask_int_with_default(prompt, default=0):
+    """Asks for integer or returns default if user presses ENTER."""
+    raw = input(prompt).strip()
+    if raw == "":
+        return default
+    try:
+        val = int(raw)
+        if val < 0:
+            print("Value cannot be negative. Using default.")
+            return default
+        return val
+    except ValueError:
+        print("Invalid number. Using default.")
+        return default
+
 def build_world_interactive():
-    # 1) MAP STYLE FIRST
+    #  MAP STYLE FIRST
     map_style = _ask_choice("Map style", ["random", "balanced"])
 
-    # 2) Human players (balanced requires >= 2)
+    #  Human players (balanced requires >= 2)
     min_humans = 2 if map_style == "balanced" else 1
     num_humans = _ask_int(f"Number of HUMAN players ({min_humans}-8): ", min_humans, 8)
 
-    # 3) AI players, ensure total <= 8
+    # AI players, ensure total <= 8
     max_ai = 8 - num_humans
     if max_ai == 0:
         print("Maximum total players reached; AI players set to 0.")
@@ -69,11 +86,21 @@ def build_world_interactive():
     else:
         num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
 
+    num_same_towns_in_start = ask_int_with_default(
+        "Number of towns with SAME faction as start town in each player zone (default 0): ",
+        default=0
+    )
+
+    num_diff_towns_in_start = ask_int_with_default(
+        "Number of towns with DIFFERENT faction than start town in each player zone (default 0): ",
+        default=0
+    )
+
     # 4) Disable special weeks?
     disable_special_weeks = _ask_bool_random("Disable special weeks")
 
     # 5) Anarchy?
-    anarchy = _ask_bool_random("Enable anarchy")
+    anarchy = _ask_bool_random("Enable anarchy (allows accessing some objects without figting the guards)")
 
     # 6) Joining percent
     joining_percent = _ask_int(
@@ -103,7 +130,9 @@ def build_world_interactive():
         main_zone_nodes=(8, 16),
         player_zone_nodes=(3, 4),
         avg_links_main=3,
-        avg_links_player=2
+        avg_links_player=2,
+        num_same_towns_in_start=num_same_towns_in_start,
+        num_diff_towns_in_start=num_diff_towns_in_start
     )
 
     # Debug output

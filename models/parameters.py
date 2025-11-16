@@ -252,39 +252,6 @@ def assign_zone_attributes(node):
     # misc parameters
     node.attributes.update(meta_zone_attributes(node))
 
-def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
-    """Generate a connected subgraph with controlled link randomness."""
-    g = Graph()
-    nodes = [Node(id_start + i, owner=owner) for i in range(num_nodes)]
-    for n in nodes:
-        g.add_node(n)
-
-    # Step 1: Spanning tree for guaranteed connectivity
-    available_nodes = nodes[:]
-    connected = [available_nodes.pop()]
-    while available_nodes:
-        node_a = random.choice(connected)
-        node_b = available_nodes.pop()
-        g.add_link(node_a, node_b)
-        connected.append(node_b)
-
-    # Step 2: Add random extra links (safe bounded version)
-    max_possible_links = num_nodes * (num_nodes - 1) // 2
-    target_links = min(int(num_nodes * avg_links_per_node / 2), max_possible_links)
-    all_pairs = list(combinations(nodes, 2))
-    random.shuffle(all_pairs)
-
-    for (a, b) in all_pairs:
-        if len(g.links) >= target_links:
-            break
-        g.add_link(a, b)
-
-    # Mark start node if needed
-    if start_zone:
-        random.choice(nodes).is_start = True
-
-    return g
-
 def assign_all_link_attributes(graph):
     """
     Assign attributes for every link in a graph.
