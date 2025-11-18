@@ -57,6 +57,7 @@ def _ask_bool(prompt, default_true=True):
 
 def ask_int_with_default(prompt, default=0):
     """Asks for integer or returns default if user presses ENTER."""
+    
     raw = input(prompt).strip()
     if raw == "":
         return default
@@ -69,16 +70,61 @@ def ask_int_with_default(prompt, default=0):
     except ValueError:
         print("Invalid number. Using default.")
         return default
+    
+def _ask_bool_default(prompt, default: bool):
+    """
+    Ask a yes/no question with a default used on empty input.
+    default=True  -> 'Y/n' style
+    default=False -> 'y/N' style
+    """
+    if default:
+        suffix = " [Y/n] (default: Yes): "
+    else:
+        suffix = " [y/N] (default: No): "
+
+    raw = input(prompt + suffix).strip().lower()
+    if raw == "":
+        return default
+    if raw.startswith("y"):
+        return True
+    if raw.startswith("n"):
+        return False
+
+    print("Invalid input, using default.")
+    return default
+
+
+def _ask_ai_placement_mode():
+    """
+    Ask for AI placement mode:
+      both  - use both main and start connection lists (at least 1 from each)
+      main  - only main_conn_points
+      start - only start_conn_points
+      random- randomly choose one of the above
+    Default: 'main' on empty input or invalid value.
+    """
+    raw = input(
+        "AI placement mode [both/main/start/random] (default: main): "
+    ).strip().lower()
+
+    if raw == "":
+        return "main"
+    if raw in ("both", "main", "start", "random"):
+        return raw
+
+    print("Invalid AI placement mode, using 'main'.")
+    return "main"
+
 
 def build_world_interactive():
-    #  MAP STYLE FIRST
+    # 1) MAP STYLE
     map_style = _ask_choice("Map style", ["random", "balanced"])
 
-    #  Human players (balanced requires >= 2)
+    # 2) Human players (balanced requires >= 2)
     min_humans = 2 if map_style == "balanced" else 1
     num_humans = _ask_int(f"Number of HUMAN players ({min_humans}-8): ", min_humans, 8)
 
-    # AI players, ensure total <= 8
+    # 3) AI players, ensure total <= 8
     max_ai = 8 - num_humans
     if max_ai == 0:
         print("Maximum total players reached; AI players set to 0.")
@@ -86,6 +132,7 @@ def build_world_interactive():
     else:
         num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
 
+    # 4) Town type rules in starting zones
     num_same_towns_in_start = ask_int_with_default(
         "Number of towns with SAME faction as start town in each player zone (default 0): ",
         default=0
@@ -96,33 +143,55 @@ def build_world_interactive():
         default=0
     )
 
-    # 4) Disable special weeks?
-    disable_special_weeks = _ask_bool_random("Disable special weeks")
+    # 5) AI placement mode
+    ai_placement_mode = _ask_ai_placement_mode()
 
-    # 5) Anarchy?
-    anarchy = _ask_bool_random("Enable anarchy (allows accessing some objects without figting the guards)")
-
-    # 6) Joining percent
-    joining_percent = _ask_int(
-        "Monster joining percent: 0=25%, 1=50%, 2=75%, 3=100%, 4=random: ",
-        0, 4
+    # 6) Disable special weeks? (default: True if just ENTER)
+    disable_special_weeks = _ask_bool_default(
+        "Disable special weeks?",
+        default=True
     )
+
+    # 7) Anarchy? (default: False if just ENTER)
+    anarchy = _ask_bool_default(
+        "Enable anarchy (allows accessing some objects without fighting the guards)?",
+        default=False
+    )
+
+    # 8) Joining percent (0–4, default: 2 if ENTER)
+    while True:
+        raw = input(
+            "Monster joining percent: 0=25%, 1=50%, 2=75%, 3=100%, 4=random (default 1: 50%): "
+        ).strip()
+        if raw == "":
+            joining_percent = 1
+            break
+        try:
+            joining_percent = int(raw)
+        except ValueError:
+            print("Please enter a number between 0 and 4.")
+            continue
+
+        if 0 <= joining_percent <= 4:
+            break
+        print("Value must be between 0 and 4.")
+
     if joining_percent == 4:
         joining_percent = random.randint(0, 3)
 
-    # 7) Monsters join only for money?
-    join_only_for_money = _ask_bool(
+    # 9) Monsters join only for money? (default: True on ENTER)
+    join_only_for_money = _ask_bool_default(
         "Monsters join only for money?",
-        default_true=True
+        default=True
     )
 
-    # Store overrides
+    # Store overrides used later by zone/link generation
     MANUAL_OVERRIDES.update({
         "joining_percent": joining_percent,
         "join_only_for_money": join_only_for_money
     })
 
-    # 8) Generate the world
+    # 10) Generate the world
     world = generate_world(
         num_human_players=num_humans,
         num_ai_players=num_ai,
@@ -132,10 +201,11 @@ def build_world_interactive():
         avg_links_main=3,
         avg_links_player=2,
         num_same_towns_in_start=num_same_towns_in_start,
-        num_diff_towns_in_start=num_diff_towns_in_start
+        num_diff_towns_in_start=num_diff_towns_in_start,
+        ai_placement_mode=ai_placement_mode,
     )
 
-    # Debug output
+    # Debug output for AI nodes
     ai_nodes = [n for n in world.nodes if n.node_type == NodeType.START and n.owner > num_humans]
     print(f"[DEBUG] AI nodes in final world: {len(ai_nodes)}")
     for n in ai_nodes:
@@ -145,7 +215,6 @@ def build_world_interactive():
     today = datetime.now().strftime("%Y%m%d")
     template_file = f"{today}_{map_style}_H{num_humans}_{num_ai}CP.h3t"
 
-    # NOW RETURN NEW VARIABLES
     return template_file, num_humans, num_ai, disable_special_weeks, anarchy, world
 
 # ───────────────────────────────────────────────
