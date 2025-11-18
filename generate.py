@@ -19,6 +19,7 @@ if __name__ == "__main__":
     template_filename, human_players, ai_players, disable_special_weeks, anarchy,world = build_world_interactive()
     world.display()
 
+    # Create h3t file and generate template values
     generate_h3t_file(
         num_humans=human_players,
         num_ais=ai_players,
@@ -27,6 +28,7 @@ if __name__ == "__main__":
         anarchy=anarchy
         )
 
-    visualize_graph(world)
-
+    # Export map parameters to h3t file
     export_to_h3t(world, filename=template_filename)
+
+    visualize_graph(world)
