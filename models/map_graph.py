@@ -5,7 +5,7 @@ from models.objects import Graph, Node, NodeType, Link
 from models.parameters import assign_zone_attributes, assign_all_link_attributes, sanity_check_links, assign_link_attributes
 
 
-def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2):
+def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2, double_link_chance=0.15):
     """Generate a connected subgraph with controlled link randomness."""
     g = Graph()
     nodes = [Node(id_start + i, owner=owner) for i in range(num_nodes)]
@@ -31,6 +31,9 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
         if len(g.links) >= target_links:
             break
         g.add_link(a, b)
+        if random.random() < double_link_chance:
+            g.add_link(a, b, allow_double=True)
+            print(f"Created double link for nodes {a.id} and {b.id}")
 
     # Mark start node if needed
     if start_zone:
@@ -41,7 +44,7 @@ def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_lin
 
 # Helpers to build main graph by style
 def _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main):
-    num_main_nodes = random.randint(*main_zone_nodes)
+    num_main_nodes = main_zone_nodes
     main_graph = generate_subgraph(num_main_nodes, current_id, avg_links_per_node=avg_links_main)
 
     # Type assignment (current "random" method)
@@ -64,7 +67,6 @@ def _generate_main_graph_balanced(
     current_id,
     avg_links_main,
     num_players=3,
-    num_ai_players=0
 ):
     """
     Generate a symmetrical balanced main graph:
@@ -76,10 +78,11 @@ def _generate_main_graph_balanced(
     """
 
     # Generate base fragment
-    fragment_size = int(random.randint(*main_zone_nodes) / num_players)
+    fragment_size = main_zone_nodes
     base_fragment = generate_subgraph(
         fragment_size, id_start=current_id, avg_links_per_node=avg_links_main
     )    
+
     current_id += fragment_size
 
     for node in base_fragment.nodes:
@@ -134,7 +137,7 @@ def _generate_main_graph_balanced(
 
         # Recreate internal links and their attributes
         for l in base_fragment.links:
-            new_link = g.add_link(nodes_map[l.node_a.id], nodes_map[l.node_b.id])
+            new_link = g.add_link(nodes_map[l.node_a.id], nodes_map[l.node_b.id], allow_double=True)
             if hasattr(l, "attributes"):
                 new_link.attributes = dict(l.attributes)
 
@@ -151,7 +154,9 @@ def _generate_main_graph_balanced(
     if base_count <= 1:
         num_cross_links = 1
     else:
-        num_cross_links = random.randint(2, base_count)
+        # Use less cross links
+        #num_cross_links = random.randint(2, base_count)
+        num_cross_links = random.randint(2, min(2, base_count - 2))
 
     base_nodes = list(base_fragment.nodes)
 
@@ -258,8 +263,8 @@ def generate_world(
     num_human_players=3,
     num_ai_players=0,
     map_style="random",                 # "random" or "balanced"
-    main_zone_nodes=(8, 16),
-    player_zone_nodes=(3, 4),
+    main_zone_nodes=4,
+    player_zone_nodes=3,
     avg_links_main=3,
     avg_links_player=2,
     num_same_towns_in_start=1,
@@ -282,15 +287,15 @@ def generate_world(
     if map_style.lower() == "balanced":
         # Balanced map generation
         main_graph, num_main_nodes, player_connection_indices, clone_graphs, base_fragment, current_id, main_conn_points = _generate_main_graph_balanced(
-            main_zone_nodes, current_id, avg_links_main, num_players=num_human_players, num_ai_players=num_ai_players
+            main_zone_nodes, current_id, avg_links_main, num_players=num_human_players
         )
     else:
         # Random map generation
-        main_graph, num_main_nodes = _generate_main_graph_random(main_zone_nodes, current_id, avg_links_main)
+        main_graph, num_main_nodes = _generate_main_graph_random(main_zone_nodes*num_human_players, current_id, avg_links_main)
         current_id += num_main_nodes
         
     # 2) Build human template starting area
-    num_nodes = random.randint(*player_zone_nodes)
+    num_nodes = player_zone_nodes
     template_graph = generate_subgraph(
         num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
     )
@@ -366,7 +371,7 @@ def generate_world(
         for l in template_graph.links:
             a = nodes_map[l.node_a.id]
             b = nodes_map[l.node_b.id]
-            new_link = g.add_link(a, b)
+            new_link = g.add_link(a, b, allow_double=True)
             if hasattr(l, "attributes"):
                 new_link.attributes = dict(l.attributes)
 
@@ -567,8 +572,12 @@ def attach_ai_balanced(
         AI_START_TEMPLATE_ATTRS = dict(tmpl.attributes)
 
     # How many AIs become "embedded" (max 1 per human)
-    embedded_count = min(num_ai_players, num_human_players)
-    remaining_ais = num_ai_players - embedded_count
+    if num_ai_players < num_human_players:
+        embedded_count = 0
+        remaining_ais = num_ai_players
+    else:
+        embedded_count = min(num_ai_players, num_human_players)
+        remaining_ais = num_ai_players - embedded_count
 
     # ---------------------------------------------------------
     # 1️⃣ EMBEDDED AIs — symmetric, shared configuration
@@ -685,7 +694,7 @@ def attach_ai_balanced(
 
         # Precompute link attributes: one template per human-player connection
 
-        global_ai_connection = Link(Node(-1), Node(-2))
+        global_ai_connection = Link(Node(-1, node_type=NodeType.START), Node(-2, node_type=NodeType.TREASURE))
         assign_link_attributes(global_ai_connection)
 
         next_owner = num_human_players + 1 + len(embedded_ai_nodes)

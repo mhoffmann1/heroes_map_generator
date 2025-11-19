@@ -30,43 +30,21 @@ def _ask_choice(prompt, choices):
         print(f"Please choose one of: {', '.join(choices)}")
 
 
-def _ask_bool_random(prompt):
-    """
-    Ask user for True / False / Random.
-    Returns: 'x' for True, '' for False, None for Random.
-    """
-    v = _ask_choice(prompt, ["true", "false", "random"])
-    if v == "true":
-        return "x"
-    elif v == "false":
-        return ""
-    else:
-        return None
-
-def _ask_bool(prompt, default_true=True):
-    """
-    Ask user True/False with default.
-    Returns 'x' for True, '' for False.
-    """
-    default = "true" if default_true else "false"
-    v = _ask_choice(f"{prompt} [default={default}]", ["true", "false"])
-    if v == "true":
-        return "x"
-    else:
-        return ""
-
-def ask_int_with_default(prompt, default=0):
+def ask_int_with_default(prompt, default=0, min=0, max=10):
     """Asks for integer or returns default if user presses ENTER."""
     
-    raw = input(prompt).strip()
-    if raw == "":
-        return default
     try:
-        val = int(raw)
-        if val < 0:
-            print("Value cannot be negative. Using default.")
-            return default
-        return val
+        val = -1
+        while val < min or val > max:
+            raw = input(prompt).strip()
+            if raw == "":
+                return default
+            val = int(raw)
+            if val < min or val > max:
+                print(f"Value cannot be smaller than {min} or larger than {max}")
+                continue
+            else:
+                return val
     except ValueError:
         print("Invalid number. Using default.")
         return default
@@ -131,16 +109,28 @@ def build_world_interactive():
         num_ai = 0
     else:
         num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
+    
+    start_zones_per_player = ask_int_with_default("Number of start zones per player (default 0 -> random): ", default=0, min=1, max=6)
+    if start_zones_per_player == 0:
+        start_zones_per_player = random.randint(3, 5)
+
+    main_zones_per_player = ask_int_with_default("Number of main zones per player (default 0 -> random): ", default=0, min=3, max=7)
+    if main_zones_per_player == 0:
+        main_zones_per_player = random.randint(4, 6)
 
     # 4) Town type rules in starting zones
     num_same_towns_in_start = ask_int_with_default(
         "Number of towns with SAME faction as start town in each player zone (default 0): ",
-        default=0
+        default=0,
+        min=0,
+        max=10
     )
 
     num_diff_towns_in_start = ask_int_with_default(
         "Number of towns with DIFFERENT faction than start town in each player zone (default 0): ",
-        default=0
+        default=0,
+        min=0,
+        max=10
     )
 
     # 5) AI placement mode
@@ -196,8 +186,8 @@ def build_world_interactive():
         num_human_players=num_humans,
         num_ai_players=num_ai,
         map_style=map_style,
-        main_zone_nodes=(8, 16),
-        player_zone_nodes=(3, 4),
+        main_zone_nodes=main_zones_per_player,
+        player_zone_nodes=start_zones_per_player,
         avg_links_main=3,
         avg_links_player=2,
         num_same_towns_in_start=num_same_towns_in_start,
@@ -355,97 +345,4 @@ def visualize_graph(world):
     plt.axis("off")
     plt.tight_layout()
     plt.show()
-
-# ───────────────────────────────────────────────
-# 🧭 Visualization with player-zone hull shading
-# ───────────────────────────────────────────────
-def visualize_graph(world):
-    try:
-        import matplotlib.pyplot as plt
-        import networkx as nx
-    except ImportError:
-        print("Visualization libraries (networkx/matplotlib) not installed.")
-        return
-
-    ids = [n.id for n in world.nodes]
-    print(f"Total nodes: {len(world.nodes)}, Unique IDs: {len(set(ids))}")
-    loops = [l for l in world.links if l.node_a.id == l.node_b.id]
-    print(f"Self-loops: {len(loops)}")
-
-
-    G = nx.Graph()
-
-    # Add nodes with attributes
-    for node in world.nodes:
-        G.add_node(node.id, owner=node.owner, is_start=node.is_start)
-
-    # Add edges
-    for link in world.links:
-        G.add_edge(link.node_a.id, link.node_b.id)
-
-    # Consistent layout
-    pos = nx.spring_layout(G, seed=42, k=0.7)
-
-    # Color mapping for nodes
-    palette = ["red", "blue", "tan", "green", "orange", "purple", "teal", "pink"]
-    node_colors = []
-    for node_id in G.nodes:
-        data = G.nodes[node_id]
-        owner = data.get("owner")
-        is_start = data.get("is_start")
-        if is_start:
-            node_colors.append("yellow")
-        elif owner:
-            node_colors.append(palette[(owner - 1) % len(palette)])
-        else:
-            node_colors.append("gray")
-
-    # Draw edges first
-    plt.figure(figsize=(10, 8))
-    nx.draw_networkx_edges(G, pos, alpha=0.5)
-
-    # ── Draw shaded convex hulls for each player's zone
-    # group node ids by owner
-    owner_to_nodes = {}
-    for node in world.nodes:
-        if node.owner:
-            owner_to_nodes.setdefault(node.owner, []).append(node.id)
-
-    for owner, ids in owner_to_nodes.items():
-        pts = [(pos[n][0], pos[n][1]) for n in ids]
-
-        # Handle tiny groups gracefully
-        hull_pts = []
-        if len(pts) >= 3:
-            hull_pts = _monotonic_chain(pts)
-            hull_pts = _inflate_polygon(hull_pts, amount=0.06)  # small padding
-        elif len(pts) == 2:
-            # make a skinny capsule-like quad around the segment
-            (x1, y1), (x2, y2) = pts
-            dx, dy = x2 - x1, y2 - y1
-            mag = math.hypot(dx, dy) or 1.0
-            nxp, nyp = -dy / mag, dx / mag  # perpendicular
-            pad = 0.05
-            hull_pts = [(x1 + nxp*pad, y1 + nyp*pad),
-                        (x2 + nxp*pad, y2 + nyp*pad),
-                        (x2 - nxp*pad, y2 - nyp*pad),
-                        (x1 - nxp*pad, y1 - nyp*pad)]
-        else:
-            # single point: small diamond
-            x, y = pts[0]
-            pad = 0.06
-            hull_pts = [(x, y + pad), (x + pad, y), (x, y - pad), (x - pad, y)]
-
-        # Fill polygon with player color, low alpha
-        face = palette[(owner - 1) % len(palette)]
-        xs, ys = zip(*hull_pts)
-        plt.fill(xs, ys, alpha=0.15, color=face, zorder=0, linewidth=0)
-
-    # Draw nodes on top
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=520, edgecolors="black")
-    nx.draw_networkx_labels(G, pos, font_size=9, font_color="white")
-
-    plt.title("Heroes 3 Map Graph — Player Zones Highlighted")
-    plt.axis("off")
-    plt.tight_layout()
-    plt.show()
+    
