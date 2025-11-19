@@ -692,11 +692,6 @@ def attach_ai_balanced(
 
         print(f"[DEBUG] Attaching {remaining_ais} global AIs via main_conn_points (main_len={main_len})")
 
-        # Precompute link attributes: one template per human-player connection
-
-        global_ai_connection = Link(Node(-1, node_type=NodeType.START), Node(-2, node_type=NodeType.TREASURE))
-        assign_link_attributes(global_ai_connection)
-
         next_owner = num_human_players + 1 + len(embedded_ai_nodes)
 
         for _ in range(remaining_ais):
@@ -710,6 +705,9 @@ def attach_ai_balanced(
                 is_start=True
             )
             current_id += 1
+
+            global_ai_connection = Link(Node(-1, node_type=NodeType.START), Node(-2, node_type=NodeType.TREASURE))
+            assign_link_attributes(global_ai_connection)
 
             # Use template as base, then customize
             ai_node.attributes = dict(AI_START_TEMPLATE_ATTRS)
