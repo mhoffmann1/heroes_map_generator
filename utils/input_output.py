@@ -93,18 +93,21 @@ def _ask_ai_placement_mode():
     print("Invalid AI placement mode, using 'main'.")
     return "main"
 
-
-def ask_int_with_default(prompt, default=0):
+def ask_int_with_default(prompt, default=0, min=0, max=10):
     """Asks for integer or returns default if user presses ENTER."""
-    raw = input(prompt).strip()
-    if raw == "":
-        return default
+    
     try:
-        val = int(raw)
-        if val < 0:
-            print("Value cannot be negative. Using default.")
-            return default
-        return val
+        val = -1
+        while val < min or val > max:
+            raw = input(prompt).strip()
+            if raw == "":
+                return default
+            val = int(raw)
+            if val < min or val > max:
+                print(f"Value cannot be smaller than {min} or larger than {max}")
+                continue
+            else:
+                return val
     except ValueError:
         print("Invalid number. Using default.")
         return default
