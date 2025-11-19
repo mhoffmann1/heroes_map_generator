@@ -1,5 +1,4 @@
 import random
-from itertools import combinations
 
 from config import MANUAL_OVERRIDES, RESOURCE_NAMES, ZONE_CONFIG
 from models.objects import NodeType
@@ -7,7 +6,6 @@ from utils.randomize import (
     jitter,
     pick_random_subset,
     random_bool,
-    random_choice_weighted,
     weighted_choice,
 )
 

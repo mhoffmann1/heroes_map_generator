@@ -2,25 +2,50 @@
 Generates random templates for Heroes 3 HotA map generator for a more 'random' user experience
 
 # To Do
-- Generate initial values for zones - DONE
-- Generate initial values for connections - DONE
-- Generate starting areas for players or players + AI - DONE
-    - add computer player zones into main graph - DONE
-- Generate fair main grid - DONE
-- Print template to file - DONE
-- generate template values
-- starting zones connect to main branch using same node - DONE
-- starting zones and AI zones in balanced mode use same Link attributes - DONE
-- Global AI players use fair Links DONE
-- balanced mode has a chance for a star NODE connecting to all base fragments
-- starting areas for Humans - add rules for origin castle (same/different)
-- change monster strenght for zones that connect with JUNCTION - DONE
+
+- add option to modify the number od zones in main map area - DONE
+- all towns/castles are the same type - change setting
+- fix Global AI being connected to same nodes - DONE
+- enable double connections - DONE
+- potential conneciton points should have full pool - DONE
 
 # Bugs
 
 - is_player_to_main in add_link method in graph is not triggering the right monster values in parameters
+- if there are less AI players than Human players they should be global AI. Now they are Embedded
 
 # Variables description
+
+## Template
+
+val1 - 11
+val2 - 10
+val3 - 4
+val4 - 8
+val5 - 10
+val6 - 18
+val7 - 4
+template_pack_name - name of template pack
+template_pack_dsc - description of template pack
+available_castles - None
+available_heroes - "+144 +145 +146 +147 +148 +149 +150 +151 +152 +153 +196 +197"
+mirror_template - None ('x' if enabled)
+empty
+max_battle_rounds - 100
+empty
+template_name - string
+min_size - 32
+max_size - 99
+available_artifacts - None
+available_comb_artifacts - "+1 "
+available_spells - None
+available_secondary_skills - None
+disable_objects - "-88 3"
+rock_block_radius - empty (x if enabled, float if custom value)
+zone_sparsness - 0.8 - 1.5 (float)
+disable_special_weeks - empty (or 'x')
+allow_spell_research - 'x'
+anarchy - empty or 'x'
 
 ## Nodes
 

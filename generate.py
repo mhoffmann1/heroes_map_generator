@@ -3,14 +3,6 @@ import random
 from utils.input_output import build_world_interactive, visualize_graph
 from utils.export import export_to_h3t, generate_h3t_file
 
-# Optional visualization libraries
-try:
-    import matplotlib.pyplot as plt
-    import networkx as nx
-    HAS_VIS = True
-except ImportError:
-    HAS_VIS = False
-
 if __name__ == "__main__":
     
     random.seed()  # Set e.g. random.seed(42) for deterministic output
