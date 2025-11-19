@@ -94,15 +94,30 @@ def _ask_ai_placement_mode():
     return "main"
 
 
+def ask_int_with_default(prompt, default=0):
+    """Asks for integer or returns default if user presses ENTER."""
+    raw = input(prompt).strip()
+    if raw == "":
+        return default
+    try:
+        val = int(raw)
+        if val < 0:
+            print("Value cannot be negative. Using default.")
+            return default
+        return val
+    except ValueError:
+        print("Invalid number. Using default.")
+        return default
+
 def build_world_interactive():
     # 1) MAP STYLE
     map_style = _ask_choice("Map style", ["random", "balanced"])
 
-    # 2) Human players (balanced requires >= 2)
+    #  Human players (balanced requires >= 2)
     min_humans = 2 if map_style == "balanced" else 1
     num_humans = _ask_int(f"Number of HUMAN players ({min_humans}-8): ", min_humans, 8)
 
-    # 3) AI players, ensure total <= 8
+    # AI players, ensure total <= 8
     max_ai = 8 - num_humans
     if max_ai == 0:
         print("Maximum total players reached; AI players set to 0.")
