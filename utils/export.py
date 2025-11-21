@@ -1,8 +1,15 @@
+import os
 import random
+import sys
 from datetime import datetime
 
 from config import LINK_FIELDS, ZONE_FIELDS, NodeType
 
+def resource_path(relative_path):
+    """Get absolute path to resource (works for dev and PyInstaller)."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 def generate_h3t_file(
         num_humans,
@@ -18,10 +25,12 @@ def generate_h3t_file(
     - Auto-generated template attributes appended as one TAB-separated line
     """
 
+    actual_source_path = resource_path(source_path)
+
     # --------------------------------------------------------
     # 1. Load static header from source file
     # --------------------------------------------------------
-    with open(source_path, "r", encoding="utf-8") as src:
+    with open(actual_source_path, "r", encoding="utf-8") as src:
         base_content = src.read()
 
     # --------------------------------------------------------
