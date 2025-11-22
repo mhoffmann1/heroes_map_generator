@@ -156,7 +156,7 @@ def _generate_main_graph_balanced(
     else:
         # Use less cross links
         #num_cross_links = random.randint(2, base_count)
-        num_cross_links = random.randint(2, min(2, base_count - 2))
+        num_cross_links = random.randint(2, max(2, base_count - 2))
 
     base_nodes = list(base_fragment.nodes)
 

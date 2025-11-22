@@ -128,13 +128,13 @@ def build_world_interactive():
     else:
         num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
     
-    start_zones_per_player = ask_int_with_default("Number of start zones per player (default 0 -> random): ", default=0, min=1, max=6)
+    start_zones_per_player = ask_int_with_default("Number of start zones per player (best 1-6, 0 -> random): ", default=0, min=0, max=10)
     if start_zones_per_player == 0:
         start_zones_per_player = random.randint(3, 5)
 
-    main_zones_per_player = ask_int_with_default("Number of main zones per player (default 0 -> random): ", default=0, min=3, max=7)
+    main_zones_per_player = ask_int_with_default("Number of main zones per player (best 3-7, 0 -> random): ", default=0, min=0, max=10)
     if main_zones_per_player == 0:
-        main_zones_per_player = random.randint(4, 6)
+        main_zones_per_player = random.randint(4, 7)
 
     # 4) Town type rules in starting zones
     num_same_towns_in_start = ask_int_with_default(
