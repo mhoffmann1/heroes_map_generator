@@ -351,7 +351,7 @@ def assign_link_attributes(link, is_player_to_main=False):
     # ───────────────────────────────
     # PLACEMENT HINT
     # ───────────────────────────────
-    attrs["placement_hint"] = "random"
+    attrs["placement_hint"] = ""
 
     # ───────────────────────────────
     # CONNECTION TYPE: FICTIVE
