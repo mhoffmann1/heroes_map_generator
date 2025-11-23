@@ -8,7 +8,7 @@ if __name__ == "__main__":
     random.seed()  # Set e.g. random.seed(42) for deterministic output
 
     #world = generate_world(num_players=3)
-    template_filename, human_players, ai_players, disable_special_weeks, anarchy,world = build_world_interactive()
+    template_filename, map_style, human_players, ai_players, disable_special_weeks, anarchy,world = build_world_interactive()
     world.display()
 
     # Create h3t file and generate template values
@@ -16,6 +16,7 @@ if __name__ == "__main__":
         num_humans=human_players,
         num_ais=ai_players,
         output_path=template_filename,
+        map_style=map_style,
         disable_special_weeks=disable_special_weeks,
         anarchy=anarchy
         )
@@ -23,4 +24,4 @@ if __name__ == "__main__":
     # Export map parameters to h3t file
     export_to_h3t(world, filename=template_filename)
 
-    visualize_graph(world)
+    #visualize_graph(world)

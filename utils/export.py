@@ -16,6 +16,7 @@ def generate_h3t_file(
         num_ais,
         source_path="h3t_source.h3t", 
         output_path="output.h3t",
+        map_style="default",
         disable_special_weeks=None,
         anarchy=None,
         ):
@@ -38,7 +39,7 @@ def generate_h3t_file(
     # --------------------------------------------------------
     # Template pack / name
     today = datetime.now().strftime("%Y%m%d")
-    template_pack_name = f"{today}_balanced_H{num_humans}_C{num_ais}"
+    template_pack_name = f"{today}_{map_style}_H{num_humans}_C{num_ais}"
     template_pack_dsc = "template generated using automation"
 
     # Randomized fields

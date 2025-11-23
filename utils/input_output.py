@@ -223,7 +223,7 @@ def build_world_interactive():
     today = datetime.now().strftime("%Y%m%d")
     template_file = f"{today}_{map_style}_H{num_humans}_{num_ai}CP.h3t"
 
-    return template_file, num_humans, num_ai, disable_special_weeks, anarchy, world
+    return template_file, map_style, num_humans, num_ai, disable_special_weeks, anarchy, world
 
 # ───────────────────────────────────────────────
 # Small geometry helpers (no extra deps)
