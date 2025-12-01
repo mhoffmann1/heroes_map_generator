@@ -298,15 +298,17 @@ def assign_link_attributes(link, is_player_to_main=False):
         def strength_range(a_t, b_t):
             combo = {a_t, b_t}
             if combo == {NodeType.NEUTRAL}:
-                return (2000, 4000)
+                return (3000, 5000)
             if combo == {NodeType.NEUTRAL, NodeType.TREASURE} or combo == {NodeType.TREASURE, None}:
                 return (6000, 9000)
             if combo == {NodeType.TREASURE}:
-                return (10000, 12000)
+                return (10000, 15000)
             if combo == {NodeType.TREASURE, NodeType.SUPER_TREASURE}:
-                return (12000, 20000)
+                return (14000, 22000)
             if combo == {NodeType.NEUTRAL, NodeType.SUPER_TREASURE} or combo == {NodeType.SUPER_TREASURE, None}:
                 return (15000, 25000)
+            if combo == {NodeType.SUPER_TREASURE, NodeType.SUPER_TREASURE}:
+                return (20000, 30000)
             if NodeType.JUNCTION in combo:
                 return (10000, 20000)
             if is_player_to_main:

@@ -104,12 +104,20 @@ def _generate_main_graph_balanced(
     # Chose potential connection points for AI zones
     base_nodes = list(base_fragment.nodes)
 
+    # Pick random 2-3 main connection points for each player fragment
+    # This turned out not to be that great... to many connections for global AIs
     # How many potential connection points per fragment (2–3)
-    num_potential_main = random.choice([2, 3])
-    base_potential_indices = random.sample(
-        range(len(base_nodes)),
-        k=min(num_potential_main, len(base_nodes))
-    )
+   
+    #num_potential_main = random.choice([2, 3])
+    #base_potential_indices = random.sample(
+    #    range(len(base_nodes)),
+    #    k=min(num_potential_main, len(base_nodes))
+    #)
+
+    # All nodes become potential main connectors (for symmetrical linking)
+    base_potential_indices = list(range(len(base_nodes)))
+
+    
 
     # Mark them explicitly (optional, mostly for debugging / export)
     for idx in base_potential_indices:

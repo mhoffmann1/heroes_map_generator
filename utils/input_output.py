@@ -206,7 +206,7 @@ def build_world_interactive():
         map_style=map_style,
         main_zone_nodes=main_zones_per_player,
         player_zone_nodes=start_zones_per_player,
-        avg_links_main=3,
+        avg_links_main=2,
         avg_links_player=2,
         num_same_towns_in_start=num_same_towns_in_start,
         num_diff_towns_in_start=num_diff_towns_in_start,
