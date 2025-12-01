@@ -331,12 +331,15 @@ def generate_world(
     # Mark potential conneciton points for AI in player start zone
     template_nodes = list(template_graph.nodes)
 
-    num_potential_start = random.choice([2, 3])  # or make this a setting later
-    start_potential_indices = random.sample(
-        range(len(template_nodes)),
-        k=min(num_potential_start, len(template_nodes))
-    )
+    #num_potential_start = random.choice([2, 3])  # or make this a setting later
+    #start_potential_indices = random.sample(
+    #    range(len(template_nodes)),
+    #    k=min(num_potential_start, len(template_nodes))
+    #)
 
+    # All start nodes are potential connection points
+    start_potential_indices = list(range(len(template_nodes)))
+    
     for idx in start_potential_indices:
         node = template_nodes[idx]
         node.attributes["potential_connection_start"] = True
@@ -579,14 +582,21 @@ def attach_ai_balanced(
         assign_zone_attributes(tmpl)
         AI_START_TEMPLATE_ATTRS = dict(tmpl.attributes)
 
-    # How many AIs become "embedded" (max 1 per human)
     if num_ai_players < num_human_players:
         embedded_count = 0
         remaining_ais = num_ai_players
+    
     else:
-        embedded_count = min(num_ai_players, num_human_players)
+        # Max number of full blocks we could embed
+        max_blocks = num_ai_players // num_human_players
+        
+        # Randomly choose 1..max_blocks with equal probability
+        num_blocks = random.randint(1, max_blocks)
+    
+        embedded_count = num_blocks * num_human_players
         remaining_ais = num_ai_players - embedded_count
 
+    print(f"[DEBUG] Embedded AIs: {embedded_count}, Global AIs: {remaining_ais}")
     # ---------------------------------------------------------
     # 1️⃣ EMBEDDED AIs — symmetric, shared configuration
     # ---------------------------------------------------------
@@ -649,8 +659,22 @@ def attach_ai_balanced(
                 assign_link_attributes(dummy)
                 EMBEDDED_LINK_ATTRS.append(dict(dummy.attributes))
             next_owner = num_human_players + 1
-            # Create embedded AI players (1 per human)
+
+            # Random target list choice per embedding block
+            num_blocks = (embedded_count + num_human_players - 1) // num_human_players
+            block_main_choice = {}
+            block_start_choice = {}
+
+            for block in range(num_blocks):
+                if main_len > 0:
+                    block_main_choice[block] = random.randrange(main_len)
+                if start_len > 0:
+                    block_start_choice[block] = random.randrange(start_len)
+
+
+            # Create embedded AI players
             for i in range(embedded_count):
+                block = i // num_human_players
                 ai_owner = next_owner
                 next_owner += 1
                 ai_node = Node(
@@ -667,18 +691,28 @@ def attach_ai_balanced(
                 # Attach to this player's main & start according to chosen indices
                 attr_idx = 0
                 # MAIN side
-                for idx in main_indices:
-                    target_list = main_conn_points[i]
-                    if idx < len(target_list):
-                        target = target_list[idx]
+                for _ in main_indices:  # we don't use idx anymore
+                    block = i // num_human_players
+
+                    connector_index = block_main_choice[block]   # <--- the correct random index
+
+                    target_list = main_conn_points[i % len(main_conn_points)]  # symmetric: human i
+
+                    if connector_index < len(target_list):
+                        target = target_list[connector_index]
                         link = ai_graph.add_link(ai_node, target)
                         link.attributes = dict(EMBEDDED_LINK_ATTRS[attr_idx])
                         attr_idx += 1
                 # START side
-                for idx in start_indices:
-                    target_list = start_conn_points[i]
-                    if idx < len(target_list):
-                        target = target_list[idx]
+                for _ in start_indices:  # idx not needed
+                    block = i // num_human_players
+
+                    connector_index = block_start_choice[block]   # <--- the correct random index
+
+                    target_list = start_conn_points[i % len(start_conn_points)]
+
+                    if connector_index < len(target_list):
+                        target = target_list[connector_index]
                         link = ai_graph.add_link(ai_node, target)
                         link.attributes = dict(EMBEDDED_LINK_ATTRS[attr_idx])
                         attr_idx += 1
