@@ -8,6 +8,10 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 - fix Global AI being connected to same nodes - DONE
 - enable double connections - DONE
 - potential conneciton points should have full pool - DONE
+- avg link per node in main - 3 seems to much -> reduce to 2 or make it dependent on number of main nodes - DONE (set to 2, no extra logic for now)
+- AI placement enable start/main/both/random to random map (currently only works for balanced) - DONE
+- AI placement main in balanced aggregates to much on the same nodes - DONE
+- add easy, normal, hard for AI players -> provide them extra resources in their starting tiles
 
 # Bugs
 
@@ -148,3 +152,106 @@ for all other connection between zones. Rule of thumb is: the more valuable the 
 * human_players_max - 8
 * total_players_min - 2
 * total_players_max - 8
+
+# General template settings in h3t files
+
+## Connections
+
+Variables in order of appearance:
+'-' means empty (/t) value
+Starts right after Zones section, on 2nd line of Zones
+
+* Zone A (int)
+* Zone B (int)
+* Guard strenght (int)
+* Connection type wide (x)
+* Connection type Border Guard (x)
+* Roads (+ [yes], - [no], '-' [random] )
+* Placement hint (random, teleport, underground, ground, - )
+* Connection type Fictive (x)
+* Monolith repulsion (x)
+* Connection occurence requirements section (Human players: min (int), max (int), Total Players: min (int), max (int))
+
+Notes:
+Connection type - if all set to '-' then it will be standard. Fictive and Border Guard should be avoided.
+
+5	15	30000				random			1	6	2	6
+
+## Zones
+
+Variables in order of appearance:
+'-' means empty (/t) value
+
+Start on 29th /t
+
+* Zone ID
+* Human Start (x)
+* Computer Zone (x) - leave empty
+* Treasue Zone (x)
+* Junction Zone (x)
+* Size (int) - 20 is standard size
+* 1
+* 6
+* 2
+* 6
+* Player controling the zone (int, 1 - 8) 
+* Player towns min (int or '-')
+* Player castles min (int or '-')
+* Player towns density (int or '-')
+* Player castle density (int or '-')
+* neutral towns min (int or '-')
+* neutral castle min (int or '-')
+* neutral towns density (int or '-')
+* neutral castel density (int or '-')
+* All castles are the same (x)
+* allowed castles (x for each, x11 entries) 
+
+* wood_min (int or '-')
+* mercury_min (int or '-')
+* ore_min
+* sulfur_min (int or '-')
+* crystals_min (int or '-')
+* gems_min (int or '-')
+* gold_min (int or '-')
+* wood_density (int or '-')
+* mercury_density (int or '-')
+* ore_density (int or '-')
+* sulfur_density (int or '-')
+* crystals-density (int or '-')
+* gems_density (int or '-')
+* gold_density (int or '-')
+
+* Terrain must match town (x)
+* allowed terrain type (x for each, x10 entries)
+* monster strenght (none, weak, avg, strong)
+* match to to town (x)
+* Monster types (x for each, starting neutral, then specific factions, x12 entries )
+
+* treasure1 low (int or '-')    ----> if empty, all treasure# related fields need to be empty
+* treasure1 high (int or '-')
+* treasure1 density (int or '-')
+* treasure2 low (int or '-')
+* treasure2 high (int or '-')
+* treasure2 density (int or '-')
+* treasure3 low (int or '-')
+* treasure3 high (int or '-')
+* treasure3 density (int or '-')
+* Placement (ground, underground, '-')
+* Objects section (variable lenght, each entry looks similar to: +16 0 d d d d )
+*
+* UI editor positions (-/+ int, x4)
+* Zone faction force neutral (x)
+* Allow non coherent road (x)
+* Zone repulsion (x)
+* Town type rules (string)
+* Monster disposition (0 - always join, 1 - Friendly [1-7], 2 - Aggresive [1-10], 3 - hostile [4-10], 4-  Savage [10], 5 - custom )
+* Custom monster disposition (int 1-9)
+* Joining percent of monsters (0 - 25%, 1 - 50%, 2 - 75%, 3 - 100%)
+* Join only for money (x)
+* Shipyard min (int or '-')
+* Shipyard density (int or '-')
+* Terrain type rule (string)
+* bitmap size 11
+* Zone Faction rule (string)
+* Max road block value ('-" or int)
+
