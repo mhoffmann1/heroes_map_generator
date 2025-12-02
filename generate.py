@@ -24,4 +24,4 @@ if __name__ == "__main__":
     # Export map parameters to h3t file
     export_to_h3t(world, filename=template_filename)
 
-    #visualize_graph(world)
+    visualize_graph(world)
