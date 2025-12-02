@@ -446,16 +446,65 @@ def generate_world(
         # 5) Create AI players: each gets a single START node cloned from the template START
         #    and connects to main graph with 2 links
         next_owner = num_human_players + 1
+        
         for _ in range(num_ai_players):
             ai_start = Node(current_id, node_type=NodeType.START, owner=next_owner, is_start=True)
             ai_start.attributes = dict(tmpl_start.attributes)
             ai_start.attributes["player_control"] = next_owner
+        
             ai_graph = Graph()
             ai_graph.add_node(ai_start)
-            # connect to 2 random main graph nodes (from the same AI start node)
-            main_targets = random.sample(list(main_graph.nodes), 2)
-            for target in main_targets:
-                ai_graph.add_link(ai_start, target)
+        
+            # Determine where this AI should connect:
+            mode = ai_placement_mode.lower()
+        
+            if mode == "random":
+                mode = random.choice(["main", "start", "both"])
+        
+            # Collect target lists for convenience
+            main_nodes = list(main_graph.nodes)
+            # flatten human start connection points
+            start_nodes = [n for player_zone in start_conn_points for n in player_zone]
+        
+            # MAIN only
+            if mode == "main":
+                # two connections to the main area
+                targets = random.sample(main_nodes, k=2)
+                for tgt in targets:
+                    link = ai_graph.add_link(ai_start, tgt)
+                    assign_link_attributes(link)
+        
+            # START only
+            elif mode == "start":
+                if len(start_nodes) >= 2:
+                    targets = random.sample(start_nodes, k=2)
+                elif len(start_nodes) == 1:
+                    targets = [start_nodes[0], start_nodes[0]]
+                else:
+                    # fallback if somehow no start nodes exist
+                    targets = random.sample(main_nodes, k=2)
+        
+                for tgt in targets:
+                    link = ai_graph.add_link(ai_start, tgt)
+                    assign_link_attributes(link)
+        
+            # BOTH (one link to main, one to start)
+            elif mode == "both":
+                if len(start_nodes) == 0:
+                    # fallback if no start nodes available
+                    targets = random.sample(main_nodes, k=2)
+                    for tgt in targets:
+                        link = ai_graph.add_link(ai_start, tgt)
+                        assign_link_attributes(link)
+                else:
+                    tgt_main = random.choice(main_nodes)
+                    tgt_start = random.choice(start_nodes)
+                    link1 = ai_graph.add_link(ai_start, tgt_main)
+                    link2 = ai_graph.add_link(ai_start, tgt_start)
+                    assign_link_attributes(link1)
+                    assign_link_attributes(link2)
+        
+            # Merge AI graph into world
             world.merge(ai_graph)
             current_id += 1
             next_owner += 1
