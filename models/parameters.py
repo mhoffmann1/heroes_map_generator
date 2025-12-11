@@ -1,7 +1,7 @@
 import random
 
 from config import MANUAL_OVERRIDES, RESOURCE_NAMES, ZONE_CONFIG
-from models.objects import NodeType
+from models.objects import NodeType, AIDifficulty
 from utils.randomize import (
     jitter,
     pick_random_subset,
@@ -249,6 +249,35 @@ def assign_zone_attributes(node):
     node.attributes.update(treasure_attributes(node))
     # misc parameters
     node.attributes.update(meta_zone_attributes(node))
+
+def apply_ai_difficulty(node, difficulty):
+    """
+    Modify the AI START node (and/or the zone around it)
+    according to difficulty.
+    """
+
+    # Normal: do nothing
+    if difficulty == AIDifficulty.NORMAL:
+        return
+
+    # Hard difficulty: give extra resources
+    if difficulty == AIDifficulty.HARD:
+        attrs = node.attributes
+        attrs["treasure1_density"] = 15
+        attrs["treasure2_density"] = 9
+        attrs["treasure3_density"] = 3
+
+    # Unfair difficulty: everything from Hard + monster joining buff
+    if difficulty == AIDifficulty.UNFAIR:
+        # Include HARD buffs
+        apply_ai_difficulty(node, AIDifficulty.HARD)
+
+        # Add unfair behavior
+        attrs = node.attributes
+        attrs["join_only_for_money"] = ''
+        attrs["monster_disposition"] = 0
+        attrs["monster_match_town"] = 1
+
 
 def assign_all_link_attributes(graph):
     """
