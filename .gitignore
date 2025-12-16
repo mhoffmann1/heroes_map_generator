@@ -1,4 +1,6 @@
 venv_generate
 __pycache__
+build
+dist
 *.h3t
 !h3t_source.h3t

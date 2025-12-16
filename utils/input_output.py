@@ -21,13 +21,17 @@ def _ask_int(prompt, min_val=None, max_val=None):
         except ValueError:
             print("Please enter an integer.")
 
-def _ask_choice(prompt, choices):
+def _ask_choice(prompt, choices, default='None'):
     choices_lower = [c.lower() for c in choices]
     while True:
         v = input(f"{prompt} ({'/'.join(choices)}): ").strip().lower()
         if v in choices_lower:
             return v
-        print(f"Please choose one of: {', '.join(choices)}")
+        else:
+            if default != 'None':
+                return default
+            else:
+                print(f"Please choose one of: {', '.join(choices)}")
 
 
 def ask_int_with_default(prompt, default=0, min=0, max=10):
@@ -128,6 +132,21 @@ def build_world_interactive():
     else:
         num_ai = _ask_int(f"Number of AI players (0-{max_ai}): ", 0, max_ai)
     
+    # ----------------------------------------
+    # AI DIFFICULTY QUESTION
+    # ----------------------------------------
+    print("\nAI Difficulty levels:")
+    print("  normal  - no bonuses")
+    print("  hard    - extra resources in AI starting zone")
+    print("  unfair  - resources + all neutral stacks join the AI")
+    print("  random  - each AI gets a random difficulty level")
+    
+    ai_difficulty_mode = _ask_choice(
+        "Choose AI difficulty",
+        ["normal", "hard", "unfair", "random"],
+        default="normal"
+    )
+
     start_zones_per_player = ask_int_with_default("Number of start zones per player (best 1-6, 0 -> random): ", default=0, min=0, max=10)
     if start_zones_per_player == 0:
         start_zones_per_player = random.randint(3, 5)
@@ -203,6 +222,7 @@ def build_world_interactive():
     world = generate_world(
         num_human_players=num_humans,
         num_ai_players=num_ai,
+        ai_difficulty_mode=ai_difficulty_mode,
         map_style=map_style,
         main_zone_nodes=main_zones_per_player,
         player_zone_nodes=start_zones_per_player,
