@@ -844,6 +844,14 @@ def attach_ai_balanced(
             ai_node.attributes = dict(AI_START_TEMPLATE_ATTRS)
             assign_zone_attributes(ai_node)
             ai_node.attributes["player_control"] = ai_owner
+            
+            # Set difficulty
+            if ai_difficulty_mode == "random":
+                ai_difficulty = random.choice(['normal','hard','unfair'])
+            else:
+                ai_difficulty = ai_difficulty_mode
+            print(f"[DEBUG] Global AI player {ai_node.owner} difficulty set to {ai_difficulty}")
+            apply_ai_difficulty(ai_node, ai_difficulty)
 
             ai_graph = Graph()
             ai_graph.add_node(ai_node)

@@ -138,7 +138,7 @@ def build_world_interactive():
     print("\nAI Difficulty levels:")
     print("  normal  - no bonuses")
     print("  hard    - extra resources in AI starting zone")
-    print("  unfair  - resources + all neutral stacks join the AI")
+    print("  unfair  - resources + all neutral stacks ins the starting zone join the AI")
     print("  random  - each AI gets a random difficulty level")
     
     ai_difficulty_mode = _ask_choice(
