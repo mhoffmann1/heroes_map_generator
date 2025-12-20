@@ -1,7 +1,7 @@
 import random
 
 from config import MANUAL_OVERRIDES, RESOURCE_NAMES, ZONE_CONFIG
-from models.objects import NodeType, AIDifficulty
+from models.objects import NodeType
 from utils.randomize import (
     jitter,
     pick_random_subset,
@@ -257,20 +257,20 @@ def apply_ai_difficulty(node, difficulty):
     """
 
     # Normal: do nothing
-    if difficulty == AIDifficulty.NORMAL:
+    if difficulty == 'normal':
         return
 
     # Hard difficulty: give extra resources
-    if difficulty == AIDifficulty.HARD:
+    if difficulty == 'hard':
         attrs = node.attributes
         attrs["treasure1_density"] = 15
         attrs["treasure2_density"] = 9
         attrs["treasure3_density"] = 3
 
     # Unfair difficulty: everything from Hard + monster joining buff
-    if difficulty == AIDifficulty.UNFAIR:
+    if difficulty == 'unfair':
         # Include HARD buffs
-        apply_ai_difficulty(node, AIDifficulty.HARD)
+        apply_ai_difficulty(node, 'hard')
 
         # Add unfair behavior
         attrs = node.attributes
