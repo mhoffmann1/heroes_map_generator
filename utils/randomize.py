@@ -26,7 +26,7 @@ def weighted_choice(weights):
         upto += w
     return len(weights)
 
-def jitter(value, pct=0.1):
+def jitter(value, pct=0.2):
     """Return value randomly adjusted by ±pct, keeping it integer."""
     low = int(value * (1 - pct))
     high = int(value * (1 + pct))

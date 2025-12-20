@@ -250,6 +250,35 @@ def assign_zone_attributes(node):
     # misc parameters
     node.attributes.update(meta_zone_attributes(node))
 
+def apply_ai_difficulty(node, difficulty):
+    """
+    Modify the AI START node (and/or the zone around it)
+    according to difficulty.
+    """
+
+    # Normal: do nothing
+    if difficulty == 'normal':
+        return
+
+    # Hard difficulty: give extra resources
+    if difficulty == 'hard':
+        attrs = node.attributes
+        attrs["treasure1_density"] = 15
+        attrs["treasure2_density"] = 9
+        attrs["treasure3_density"] = 3
+
+    # Unfair difficulty: everything from Hard + monster joining buff
+    if difficulty == 'unfair':
+        # Include HARD buffs
+        apply_ai_difficulty(node, 'hard')
+
+        # Add unfair behavior
+        attrs = node.attributes
+        attrs["join_only_for_money"] = ''
+        attrs["monster_disposition"] = 0
+        attrs["monster_match_town"] = 1
+
+
 def assign_all_link_attributes(graph):
     """
     Assign attributes for every link in a graph.

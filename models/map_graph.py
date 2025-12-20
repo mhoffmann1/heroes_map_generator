@@ -1,8 +1,8 @@
 import random
 from itertools import combinations
 
-from models.objects import Graph, Node, NodeType, Link
-from models.parameters import assign_zone_attributes, assign_all_link_attributes, sanity_check_links, assign_link_attributes
+from models.objects import Graph, Node, NodeType, Link, AIDifficulty
+from models.parameters import assign_zone_attributes, assign_all_link_attributes, sanity_check_links, assign_link_attributes, apply_ai_difficulty
 
 
 def generate_subgraph(num_nodes, id_start, owner=None, start_zone=False, avg_links_per_node=2, double_link_chance=0.15):
@@ -270,6 +270,7 @@ def _generate_main_graph_balanced(
 def generate_world(
     num_human_players=3,
     num_ai_players=0,
+    ai_difficulty_mode='normal',
     map_style="random",                 # "random" or "balanced"
     main_zone_nodes=4,
     player_zone_nodes=3,
@@ -446,26 +447,36 @@ def generate_world(
         # 5) Create AI players: each gets a single START node cloned from the template START
         #    and connects to main graph with 2 links
         next_owner = num_human_players + 1
-        
+
         for _ in range(num_ai_players):
             ai_start = Node(current_id, node_type=NodeType.START, owner=next_owner, is_start=True)
             ai_start.attributes = dict(tmpl_start.attributes)
             ai_start.attributes["player_control"] = next_owner
-        
+            if ai_difficulty_mode == "random":
+                ai_player_difficulty = random.choice([
+                    AIDifficulty.NORMAL,
+                    AIDifficulty.HARD,
+                    AIDifficulty.UNFAIR
+                ])
+                apply_ai_difficulty(ai_start, ai_player_difficulty)
+            else:
+                apply_ai_difficulty(ai_start, ai_difficulty_mode)
+            
+                
             ai_graph = Graph()
             ai_graph.add_node(ai_start)
-        
+
             # Determine where this AI should connect:
             mode = ai_placement_mode.lower()
-        
+
             if mode == "random":
                 mode = random.choice(["main", "start", "both"])
-        
+
             # Collect target lists for convenience
             main_nodes = list(main_graph.nodes)
             # flatten human start connection points
             start_nodes = [n for player_zone in start_conn_points for n in player_zone]
-        
+
             # MAIN only
             if mode == "main":
                 # two connections to the main area
@@ -473,7 +484,7 @@ def generate_world(
                 for tgt in targets:
                     link = ai_graph.add_link(ai_start, tgt)
                     assign_link_attributes(link)
-        
+
             # START only
             elif mode == "start":
                 if len(start_nodes) >= 2:
@@ -483,11 +494,11 @@ def generate_world(
                 else:
                     # fallback if somehow no start nodes exist
                     targets = random.sample(main_nodes, k=2)
-        
+
                 for tgt in targets:
                     link = ai_graph.add_link(ai_start, tgt)
                     assign_link_attributes(link)
-        
+
             # BOTH (one link to main, one to start)
             elif mode == "both":
                 if len(start_nodes) == 0:
@@ -503,7 +514,7 @@ def generate_world(
                     link2 = ai_graph.add_link(ai_start, tgt_start)
                     assign_link_attributes(link1)
                     assign_link_attributes(link2)
-        
+
             # Merge AI graph into world
             world.merge(ai_graph)
             current_id += 1
@@ -557,11 +568,12 @@ def generate_world(
             start_conn_points=start_conn_points,
             num_human_players=num_human_players,
             num_ai_players=num_ai_players,
-            ai_placement_mode=ai_placement_mode,   # or "both" if you prefer
+            ai_placement_mode=ai_placement_mode,
             current_id=current_id,
             assign_zone_attributes=assign_zone_attributes,
             assign_link_attributes=assign_link_attributes,
             AI_START_TEMPLATE_ATTRS=None,          # or precomputed template
+            ai_difficulty_mode=ai_difficulty_mode
         )
 
     assign_all_link_attributes(world)
@@ -579,6 +591,7 @@ def attach_ai_balanced(
     assign_zone_attributes,
     assign_link_attributes,
     AI_START_TEMPLATE_ATTRS=None,
+    ai_difficulty_mode='normal'
 ):
     """
     Attach AI players in a BALANCED map using precomputed symmetric connection points.
@@ -647,7 +660,7 @@ def attach_ai_balanced(
 
     print(f"[DEBUG] Embedded AIs: {embedded_count}, Global AIs: {remaining_ais}")
     # ---------------------------------------------------------
-    # 1️⃣ EMBEDDED AIs — symmetric, shared configuration
+    # EMBEDDED AIs — symmetric, shared configuration
     # ---------------------------------------------------------
     embedded_ai_nodes = []
 
@@ -721,6 +734,27 @@ def attach_ai_balanced(
                     block_start_choice[block] = random.randrange(start_len)
 
 
+            # Balanced Difficulty:
+            # This section above is the place where the difficulty settings are applied
+            # The 'block' defines the groups of AI that should have the same AI level set (in case of Random setting)
+            # Global AI is easy - each one is randomly set 
+
+            # Set difficulty
+            embedded_difficulties = []  # block_index -> difficulty string
+
+            if ai_difficulty_mode == "random":
+                num_blocks = (embedded_count + num_human_players - 1) // num_human_players
+                for b in range(num_blocks):
+                    embedded_difficulties.append(
+                        random.choice(['normal','hard','unfair'])
+                    )
+            else:
+                # All embedded AIs have same difficulty
+                num_blocks = (embedded_count + num_human_players - 1) // num_human_players
+                for b in range(num_blocks):
+                    embedded_difficulties.append(ai_difficulty_mode)
+
+
             # Create embedded AI players
             for i in range(embedded_count):
                 block = i // num_human_players
@@ -735,6 +769,12 @@ def attach_ai_balanced(
                 current_id += 1
                 ai_node.attributes = dict(AI_START_TEMPLATE_ATTRS)
                 ai_node.attributes["player_control"] = ai_owner
+
+                # Apply difficulty settings
+                difficulty = embedded_difficulties[block]
+                print(f"[DEBUG] Embedded AI player {ai_node.owner} difficulty set to {difficulty}")
+                apply_ai_difficulty(ai_node, difficulty)
+                
                 ai_graph = Graph()
                 ai_graph.add_node(ai_node)
                 # Attach to this player's main & start according to chosen indices
@@ -743,7 +783,7 @@ def attach_ai_balanced(
                 for _ in main_indices:  # we don't use idx anymore
                     block = i // num_human_players
 
-                    connector_index = block_main_choice[block]   # <--- the correct random index
+                    connector_index = block_main_choice[block]
 
                     target_list = main_conn_points[i % len(main_conn_points)]  # symmetric: human i
 
@@ -756,7 +796,7 @@ def attach_ai_balanced(
                 for _ in start_indices:  # idx not needed
                     block = i // num_human_players
 
-                    connector_index = block_start_choice[block]   # <--- the correct random index
+                    connector_index = block_start_choice[block]
 
                     target_list = start_conn_points[i % len(start_conn_points)]
 
@@ -772,7 +812,7 @@ def attach_ai_balanced(
         remaining_ais = num_ai_players - len(embedded_ai_nodes)
 
     # ---------------------------------------------------------
-    # 2️⃣ GLOBAL AIs — main only, exactly num_human_players links
+    # GLOBAL AIs — main only, exactly num_human_players links
     # ---------------------------------------------------------
     if remaining_ais > 0:
         # Determine how many positions are available in main_conn_points
@@ -804,6 +844,14 @@ def attach_ai_balanced(
             ai_node.attributes = dict(AI_START_TEMPLATE_ATTRS)
             assign_zone_attributes(ai_node)
             ai_node.attributes["player_control"] = ai_owner
+            
+            # Set difficulty
+            if ai_difficulty_mode == "random":
+                ai_difficulty = random.choice(['normal','hard','unfair'])
+            else:
+                ai_difficulty = ai_difficulty_mode
+            print(f"[DEBUG] Global AI player {ai_node.owner} difficulty set to {ai_difficulty}")
+            apply_ai_difficulty(ai_node, ai_difficulty)
 
             ai_graph = Graph()
             ai_graph.add_node(ai_node)

@@ -1,5 +1,10 @@
 from enum import Enum, auto
 
+class AIDifficulty:
+    NORMAL = "normal"
+    HARD = "hard"
+    UNFAIR = "unfair"
+
 class NodeType(Enum):
     START = auto()
     NEUTRAL = auto()
