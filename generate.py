@@ -1,27 +1,37 @@
 import random
 
-from utils.input_output import build_world_interactive, visualize_graph
-from utils.export import export_to_h3t, generate_h3t_file
+from utils.input_output import build_world_interactive
+from utils.gui import WorldGeneratorGUI
+from utils.run_pipeline import run_generation_pipeline
+
+USE_GUI = True  # ← toggle here
+
 
 if __name__ == "__main__":
-    
-    random.seed()  # Set e.g. random.seed(42) for deterministic output
+    random.seed()  # or random.seed(42)
 
-    #world = generate_world(num_players=3)
-    template_filename, map_style, human_players, ai_players, disable_special_weeks, anarchy,world = build_world_interactive()
-    world.display()
+    if USE_GUI:
+        # GUI mode
+        WorldGeneratorGUI().mainloop()
 
-    # Create h3t file and generate template values
-    generate_h3t_file(
-        num_humans=human_players,
-        num_ais=ai_players,
-        output_path=template_filename,
-        map_style=map_style,
-        disable_special_weeks=disable_special_weeks,
-        anarchy=anarchy
+    else:
+        # CLI mode (unchanged behavior)
+        (
+            template_filename,
+            map_style,
+            human_players,
+            ai_players,
+            disable_special_weeks,
+            anarchy,
+            world,
+        ) = build_world_interactive()
+
+        run_generation_pipeline(
+            template_filename=template_filename,
+            map_style=map_style,
+            human_players=human_players,
+            ai_players=ai_players,
+            disable_special_weeks=disable_special_weeks,
+            anarchy=anarchy,
+            world=world,
         )
-
-    # Export map parameters to h3t file
-    export_to_h3t(world, filename=template_filename)
-
-    visualize_graph(world)
