@@ -5,13 +5,8 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 
 - add option to modify the number od zones in main map area - DONE
 - all towns/castles are the same type - change setting
-- fix Global AI being connected to same nodes - DONE
-- enable double connections - DONE
-- potential conneciton points should have full pool - DONE
 - avg link per node in main - 3 seems to much -> reduce to 2 or make it dependent on number of main nodes - DONE (set to 2, no extra logic for now)
-- AI placement enable start/main/both/random to random map (currently only works for balanced) - DONE
-- AI placement main in balanced aggregates to much on the same nodes - DONE
-- add easy, normal, hard for AI players -> provide them extra resources in their starting tiles
+- add toggle to enable/disable special heroes in generate_h3t_file function
 
 # Bugs
 
