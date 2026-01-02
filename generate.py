@@ -4,8 +4,7 @@ from utils.input_output import build_world_interactive
 from utils.gui import WorldGeneratorGUI
 from utils.run_pipeline import run_generation_pipeline
 
-#USE_GUI = True  # ← toggle here
-USE_GUI = False
+USE_GUI = True  # ← toggle here
 
 if __name__ == "__main__":
     random.seed()  # or random.seed(42)

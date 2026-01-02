@@ -19,7 +19,7 @@ def generate_h3t_file(
         map_style="default",
         disable_special_weeks=None,
         anarchy=None,
-        special_heroes="Disabled"
+        special_heroes=False
         ):
     """
     Generates a full .h3t template file using:
@@ -53,7 +53,7 @@ def generate_h3t_file(
         anarchy = random.choice(["", "x"])
     else:
         anarchy = 'x' if anarchy else ''
-    if special_heroes == "Disabled":
+    if not special_heroes:
         heroes = ""
     else:
         heroes = "+144 +145 +146 +147 +148 +149 +150 +151 +152 +153 +196 +197"

@@ -213,7 +213,10 @@ def build_world_interactive():
     )
 
     # 10) Allow special heroes (ie. Gelu, Mutare Drake etc.)
-    heroes = _ask_choice("Special heroes?", ["Enabled", "Disabled"])
+    heroes = _ask_bool_default(
+        "Enable special heroes?",
+        default=True
+    )
 
     # Store overrides used later by zone/link generation
     MANUAL_OVERRIDES.update({
