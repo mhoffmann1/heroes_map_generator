@@ -10,6 +10,7 @@ def run_generation_pipeline(
     disable_special_weeks,
     anarchy,
     world,
+    heroes,
 ):
     # Optional debug
     world.display()
@@ -22,6 +23,7 @@ def run_generation_pipeline(
         map_style=map_style,
         disable_special_weeks=disable_special_weeks,
         anarchy=anarchy,
+        special_heroes=heroes
     )
 
     # Export map parameters to h3t file

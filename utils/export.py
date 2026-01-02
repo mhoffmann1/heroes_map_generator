@@ -19,6 +19,7 @@ def generate_h3t_file(
         map_style="default",
         disable_special_weeks=None,
         anarchy=None,
+        special_heroes="Disabled"
         ):
     """
     Generates a full .h3t template file using:
@@ -46,14 +47,22 @@ def generate_h3t_file(
     zone_sparsness = round(random.uniform(0.8, 1.5), 3)  # float
     if disable_special_weeks is None:
         disable_special_weeks = random.choice(["", "x"])
+    else:
+        disable_special_weeks = 'x' if disable_special_weeks else ''
     if anarchy is None:
         anarchy = random.choice(["", "x"])
+    else:
+        anarchy = 'x' if anarchy else ''
+    if special_heroes == "Disabled":
+        heroes = ""
+    else:
+        heroes = "+144 +145 +146 +147 +148 +149 +150 +151 +152 +153 +196 +197"
 
     # --------------------------------------------------------
     # 3. Prepare attribute line (order EXACTLY as requested)
     # --------------------------------------------------------
     values = [
-        11,                  # val1
+        12,                  # version
         10,                  # val2
         4,                   # val3
         8,                   # val4
@@ -63,11 +72,11 @@ def generate_h3t_file(
         template_pack_name,  # template pack name
         template_pack_dsc,   # template pack description
         "",                  # available_castles
-        "+144 +145 +146 +147 +148 +149 +150 +151 +152 +153 +196 +197",
+        heroes,              # available_heroes
         "",                  # mirror_template
         "",                  # empty
         100,                 # max_battle_rounds
-        "",                  # empty
+        "",                  # Disable hero hiring
         template_pack_name,  # template_name
         32,                  # min_size
         99,                  # max_size
@@ -107,7 +116,7 @@ def export_to_h3t(world, filename="generated_template.h3t"):
     with absolutely ZERO tabs between the last zone field and the first link field.
     """
     PRE_ZONE_TABS = 28
-    ZONE_FIELD_COUNT = 93  # total zone columns (id + 4 flags + attributes)
+    ZONE_FIELD_COUNT = 95  # total zone columns (id + 4 flags + attributes)
 
     all_zones = list(world.nodes)
     all_links = list(world.links)

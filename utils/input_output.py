@@ -212,6 +212,9 @@ def build_world_interactive():
         default=True
     )
 
+    # 10) Allow special heroes (ie. Gelu, Mutare Drake etc.)
+    heroes = _ask_choice("Special heroes?", ["Enabled", "Disabled"])
+
     # Store overrides used later by zone/link generation
     MANUAL_OVERRIDES.update({
         "joining_percent": joining_percent,
@@ -243,7 +246,7 @@ def build_world_interactive():
     today = datetime.now().strftime("%Y%m%d")
     template_file = f"{today}_{map_style}_H{num_humans}_{num_ai}CP.h3t"
 
-    return template_file, map_style, num_humans, num_ai, disable_special_weeks, anarchy, world
+    return template_file, map_style, num_humans, num_ai, disable_special_weeks, anarchy, world, heroes
 
 # ───────────────────────────────────────────────
 # Small geometry helpers (no extra deps)

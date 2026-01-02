@@ -4,8 +4,8 @@ from utils.input_output import build_world_interactive
 from utils.gui import WorldGeneratorGUI
 from utils.run_pipeline import run_generation_pipeline
 
-USE_GUI = True  # ← toggle here
-
+#USE_GUI = True  # ← toggle here
+USE_GUI = False
 
 if __name__ == "__main__":
     random.seed()  # or random.seed(42)
@@ -24,6 +24,7 @@ if __name__ == "__main__":
             disable_special_weeks,
             anarchy,
             world,
+            heroes,
         ) = build_world_interactive()
 
         run_generation_pipeline(
@@ -34,4 +35,5 @@ if __name__ == "__main__":
             disable_special_weeks=disable_special_weeks,
             anarchy=anarchy,
             world=world,
+            heroes=heroes
         )

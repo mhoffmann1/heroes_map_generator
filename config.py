@@ -23,7 +23,7 @@ ZONE_CONFIG = {
         "neutral_castle_density": 0,
 
         "all_castle_same": lambda: random.choice(['', 'x']),  # 50/50
-        **{f"allowed_castle_{i}": 'x' for i in range(1, 12)}
+        **{f"allowed_castle_{i}": 'x' for i in range(1, 13)}
     },
     NodeType.NEUTRAL: {
         "zone_type": lambda: 3,  # neutral = junction
@@ -48,7 +48,7 @@ ZONE_CONFIG = {
         "neutral_castle_density": 0,
 
         "all_castle_same": lambda: random.choice(['', 'x']),
-        **{f"allowed_castle_{i}": 'x' for i in range(1, 12)}
+        **{f"allowed_castle_{i}": 'x' for i in range(1, 13)}
     },
     NodeType.JUNCTION: {
         "zone_type": lambda: 3,  # neutral = junction
@@ -70,7 +70,7 @@ ZONE_CONFIG = {
         "neutral_castle_density": 0,
 
         "all_castle_same": '',
-        **{f"allowed_castle_{i}": 'x' for i in range(1, 12)}
+        **{f"allowed_castle_{i}": 'x' for i in range(1, 13)}
     },
     NodeType.TREASURE: {
         "zone_type": lambda: 2,
@@ -95,7 +95,7 @@ ZONE_CONFIG = {
         "neutral_castle_density": 0,
 
         "all_castle_same": lambda: random.choice(['', 'x']),
-        **{f"allowed_castle_{i}": 'x' for i in range(1, 12)}
+        **{f"allowed_castle_{i}": 'x' for i in range(1, 13)}
     },
     NodeType.SUPER_TREASURE: {
         "zone_type": lambda: 2,  # same zone_type as normal treasure
@@ -120,7 +120,7 @@ ZONE_CONFIG = {
         "neutral_castle_density": 0,
 
         "all_castle_same": lambda: random.choice(['', 'x']),
-        **{f"allowed_castle_{i}": 'x' for i in range(1, 12)}
+        **{f"allowed_castle_{i}": 'x' for i in range(1, 13)}
     }
 }
 
@@ -143,8 +143,8 @@ ZONE_FIELDS = [
     "neutral_towns_min", "neutral_castle_min", "neutral_towns_density", "neutral_castle_density",
     "all_castle_same",
 
-    # Allowed castles (11)
-    *[f"allowed_castle_{i}" for i in range(1, 12)],
+    # Allowed castles (12)
+    *[f"allowed_castle_{i}" for i in range(1, 13)],
 
     # Resource mins + densities
     "wood_min", "mercury_min", "ore_min", "sulfur_min", "crystals_min", "gems_min", "gold_min",
@@ -154,7 +154,7 @@ ZONE_FIELDS = [
     "terrain_match_town",
     *[f"allowed_terrain_{i}" for i in range(1, 11)],
     "monster_strength", "monster_match_town",
-    *[f"allowed_monster_type_{i}" for i in range(1, 13)],
+    *[f"allowed_monster_type_{i}" for i in range(1, 14)],
 
     # Treasure tiers
     "treasure1_low", "treasure1_high", "treasure1_density",

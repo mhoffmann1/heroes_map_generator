@@ -125,7 +125,7 @@ def terrain_and_monster_attributes(node):
         attrs["monster_match_town"] = 0
 
     # ─── allowed_monster_type_1–12 (placeholders) ───
-    for i in range(1, 13):
+    for i in range(1, 14):
         attrs[f"allowed_monster_type_{i}"] = 'x'
 
     return attrs
