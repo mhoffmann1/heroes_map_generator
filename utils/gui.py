@@ -12,7 +12,7 @@ class WorldGeneratorGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("HoMM3 Template Generator")
-        self.geometry("520x820")
+        self.geometry("520x840")
         self.resizable(False, False)
 
         self._build_ui()
@@ -137,6 +137,13 @@ class WorldGeneratorGUI(tk.Tk):
             variable=self.anarchy
         ))
 
+        self.special_heroes = tk.BooleanVar(value=False)
+        row(ttk.Checkbutton(
+            frame,
+            text="Enable special heroes",
+            variable=self.special_heroes
+        ))
+
         # -------------------------
         # Monster joining
         # -------------------------
@@ -222,6 +229,7 @@ class WorldGeneratorGUI(tk.Tk):
                 disable_special_weeks=self.disable_weeks.get(),
                 anarchy=self.anarchy.get(),
                 world=world,
+                heroes=self.special_heroes.get(),
             )
 
             messagebox.showinfo(
