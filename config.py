@@ -86,7 +86,7 @@ ZONE_CONFIG = {
         "player_towns_density": 0,
         "player_castles_density": 0,
 
-        "neutral_towns_min": lambda: random_choice_weighted([(2, 0.1), (1, 0.3), (0, 0.6)]),
+        "neutral_towns_min": lambda: random_choice_weighted([(2, 0.1), (1, 0.25), (0, 0.65)]),
         "neutral_castle_min": lambda node: (
             0 if node.attributes.get("neutral_towns_min", 0) > 0
             else random_choice_weighted([(1, 0.2), (0, 0.8)])
@@ -111,10 +111,10 @@ ZONE_CONFIG = {
         "player_towns_density": 0,
         "player_castles_density": 0,
 
-        "neutral_towns_min": lambda: random_choice_weighted([(2, 0.1), (1, 0.3), (0, 0.6)]),
+        "neutral_towns_min": lambda: random_choice_weighted([(2, 0.1), (1, 0.25), (0, 0.65)]),
         "neutral_castle_min": lambda node: (
             0 if node.attributes.get("neutral_towns_min", 0) > 0
-            else random_choice_weighted([(2, 0.1), (1, 0.2), (0, 0.7)])
+            else random_choice_weighted([(2, 0.1), (1, 0.15), (0, 0.75)])
         ),
         "neutral_towns_density": 0,
         "neutral_castle_density": 0,
