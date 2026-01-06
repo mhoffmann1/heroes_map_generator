@@ -30,4 +30,4 @@ def run_generation_pipeline(
     export_to_h3t(world, filename=template_filename)
 
     # Optional visualization
-    visualize_graph(world)
+    # visualize_graph(world)
