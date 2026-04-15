@@ -142,8 +142,8 @@ def treasure_attributes(node):
     # Base definitions per type
     if ntype == NodeType.START or ntype == NodeType.NEUTRAL:
         t1_low, t1_high = 500, 3000
-        t2_low, t2_high = 3000, 6000
-        t3_low, t3_high = 10000, 15000
+        t2_low, t2_high = 4000, 9000
+        t3_low, t3_high = 10000, 16000
     elif ntype == NodeType.TREASURE:
         t1_low, t1_high = 3000, 6000
         t2_low, t2_high = 10000, 15000
@@ -161,20 +161,37 @@ def treasure_attributes(node):
     # Apply jitter ±10%
     attrs["treasure1_low"] = jitter(t1_low)
     attrs["treasure1_high"] = jitter(t1_high)
-    attrs["treasure1_density"] = 9
 
     attrs["treasure2_low"] = jitter(t2_low)
     attrs["treasure2_high"] = jitter(t2_high)
-    attrs["treasure2_density"] = 6
 
     attrs["treasure3_low"] = jitter(t3_low)
     attrs["treasure3_high"] = jitter(t3_high)
-    attrs["treasure3_density"] = 1
+
+    # Apply treasure density
+    
+    if ntype == NodeType.START or ntype == NodeType.NEUTRAL:
+        attrs["treasure1_density"] = 9
+        attrs["treasure2_density"] = 6
+        attrs["treasure3_density"] = 1
+    elif ntype == NodeType.TREASURE:
+        attrs["treasure1_density"] = 6
+        attrs["treasure2_density"] = 8
+        attrs["treasure3_density"] = 2
+    elif ntype == NodeType.SUPER_TREASURE:
+        attrs["treasure1_density"] = 6
+        attrs["treasure2_density"] = 8
+        attrs["treasure3_density"] = 2
+    else:
+        # fallback — treat as neutral
+        attrs["treasure1_density"] = 9
+        attrs["treasure2_density"] = 6
+        attrs["treasure3_density"] = 1
 
     # Fixed attributes
     attrs["zone_placement"] = ""     # other posible values: ground, underground
 
-    # Allow ancient lamps
+    # Allow HotA ancient lamps
     if ntype == NodeType.START:
         attrs["objects_section"] = "+145 0 d d d d d"
     else:

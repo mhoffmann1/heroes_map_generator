@@ -1,0 +1,49 @@
+S C:\Users\hoffm\itstuff\heroes_map_generator> .\venv_generate\Scripts\python.exe .\generate.py
+Number of HUMAN players (1-8): 2
+Number of AI players (0-6): 2
+Map style (random/balanced): balanced
+[DEBUG] Adding embedded AIs with connection indices [5, 0]
+Traceback (most recent call last):
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\generate.py", line 33, in <module>
+    world = build_world_interactive()
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\utils\input_output.py", line 51, in build_world_interactive
+    world = generate_world(
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\models\map_graph.py", line 297, in generate_world
+    main_graph, num_main_nodes, player_connection_indices, clone_graphs, base_fragment, current_id = _generate_main_graph_balanced(
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\models\map_graph.py", line 262, in _generate_main_graph_balanced
+    main_graph,
+UnboundLocalError: local variable 'main_graph' referenced before assignment
+
+
+PS C:\Users\hoffm\itstuff\heroes_map_generator> .\venv_generate\Scripts\python.exe .\generate.py
+Number of HUMAN players (1-8): 2
+Number of AI players (0-6): 4
+Map style (random/balanced): balanced
+Traceback (most recent call last):
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\generate.py", line 33, in <module>
+    world = build_world_interactive()
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\utils\input_output.py", line 51, in build_world_interactive
+    world = generate_world(
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\models\map_graph.py", line 297, in generate_world
+    main_graph, num_main_nodes, player_connection_indices, clone_graphs, base_fragment, current_id = _generate_main_graph_balanced(
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\models\map_graph.py", line 164, in _generate_main_graph_balanced
+    link.attributes = dict(attrs)
+AttributeError: 'NoneType' object has no attribute 'attributes'
+
+
+Zones: 24 | Links: 51 | Lines written: 51       .\venv_generate\Scripts\python.exe .\generate.pyS C:\Users\hoffm\itstuff\heroes_map_generator>
+Number of HUMAN players (1-8): 3
+Number of AI players (0-5): 2
+Map style (random/balanced): balanced
+g_i <models.objects.Graph object at 0x0000019EF96B3FA0> Node_a Node(5, TREASURE); Node_b Node(7, JUNCTION)
+g_i <models.objects.Graph object at 0x0000019EF96B3FA0> Node_a Node(5, TREASURE); Node_b Node(7, JUNCTION)
+Traceback (most recent call last):
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\generate.py", line 33, in <module>
+    world = build_world_interactive()
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\utils\input_output.py", line 51, in build_world_interactive
+    world = generate_world(
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\models\map_graph.py", line 313, in generate_world
+    main_graph, num_main_nodes, player_connection_indices, clone_graphs, base_fragment, current_id = _generate_main_graph_balanced(
+  File "C:\Users\hoffm\itstuff\heroes_map_generator\models\map_graph.py", line 166, in _generate_main_graph_balanced
+    link.attributes = dict(attrs)
+AttributeError: 'NoneType' object has no attribute 'attributes'
