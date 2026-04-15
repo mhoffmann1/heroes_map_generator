@@ -297,7 +297,7 @@ def _inflate_polygon(poly, amount=0.05):
     return inflated
 
 # ───────────────────────────────────────────────
-# 🧭 Visualization with player-zone hull shading
+# Visualization with player-zone hull shading
 # ───────────────────────────────────────────────
 def visualize_graph(world):
     try:
