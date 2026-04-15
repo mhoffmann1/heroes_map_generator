@@ -78,7 +78,7 @@ def generate_h3t_file(
         100,                 # max_battle_rounds
         "",                  # Disable hero hiring
         template_pack_name,  # template_name
-        32,                  # min_size
+        16,                  # min_size
         99,                  # max_size
         "",                  # available_artifacts
         "+1 ",               # available_comb_artifacts

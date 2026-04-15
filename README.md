@@ -250,3 +250,8 @@ Start on 29th /t
 * Zone Faction rule (string)
 * Max road block value ('-" or int)
 
+### How to build
+
+```bash
+.\venv_generate\Scripts\pyinstaller.exe --onefile --add-data "h3t_source.h3t:." generate.py 
+```

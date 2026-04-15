@@ -173,7 +173,12 @@ def treasure_attributes(node):
 
     # Fixed attributes
     attrs["zone_placement"] = ""     # other posible values: ground, underground
-    attrs["objects_section"] = ""  # empty placeholder
+
+    # Allow ancient lamps
+    if ntype == NodeType.START:
+        attrs["objects_section"] = "+145 0 d d d d d"
+    else:
+        attrs["objects_section"] = ""
 
     return attrs
 
