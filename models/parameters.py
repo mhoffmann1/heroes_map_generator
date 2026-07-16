@@ -141,16 +141,16 @@ def treasure_attributes(node):
 
     # Base definitions per type
     if ntype == NodeType.START or ntype == NodeType.NEUTRAL:
-        t1_low, t1_high = 500, 3000
+        t1_low, t1_high = 500, 3999
         t2_low, t2_high = 4000, 9000
         t3_low, t3_high = 10000, 16000
     elif ntype == NodeType.TREASURE:
         t1_low, t1_high = 3000, 6000
-        t2_low, t2_high = 10000, 15000
+        t2_low, t2_high = 6001, 15000
         t3_low, t3_high = 15000, 20000
     elif ntype == NodeType.SUPER_TREASURE:
         t1_low, t1_high = 10000, 15000
-        t2_low, t2_high = 15000, 20000
+        t2_low, t2_high = 15001, 20000
         t3_low, t3_high = 20000, 30000
     else:
         # fallback — treat as neutral
@@ -174,14 +174,17 @@ def treasure_attributes(node):
         attrs["treasure1_density"] = 9
         attrs["treasure2_density"] = 6
         attrs["treasure3_density"] = 1
+
     elif ntype == NodeType.TREASURE:
-        attrs["treasure1_density"] = 6
-        attrs["treasure2_density"] = 8
-        attrs["treasure3_density"] = 2
+        attrs["treasure1_density"] = random.randint(6, 9)
+        attrs["treasure2_density"] = random.randint(6, 9)
+        attrs["treasure3_density"] = random.randint(1, 3)
+
     elif ntype == NodeType.SUPER_TREASURE:
-        attrs["treasure1_density"] = 6
-        attrs["treasure2_density"] = 8
-        attrs["treasure3_density"] = 2
+        attrs["treasure1_density"] = random.randint(6, 9)
+        attrs["treasure2_density"] = random.randint(6, 9)
+        attrs["treasure3_density"] = random.randint(1, 3)
+
     else:
         # fallback — treat as neutral
         attrs["treasure1_density"] = 9
