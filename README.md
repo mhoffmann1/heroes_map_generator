@@ -3,15 +3,14 @@ Generates random templates for Heroes 3 HotA map generator for a more 'random' u
 
 # To Do
 
-- add option to modify the number od zones in main map area - DONE
-- all towns/castles are the same type - change setting
-- avg link per node in main - 3 seems to much -> reduce to 2 or make it dependent on number of main nodes - DONE (set to 2, no extra logic for now)
-- add toggle to enable/disable special heroes in generate_h3t_file function
+- remove limite of zones per player/main zones. Add counter showing total numer of zones that would be created instead and optionally add max limit for it (~48?)
+- add sliders for providing treasure density/values
+- add option to disable some of the castle types (**{f"allowed_castle_{i}": 'x' for i in range(1, 13)})
 
-# Bugs
+ 
+# Known bugs
 
-- is_player_to_main in add_link method in graph is not triggering the right monster values in parameters
-- if there are less AI players than Human players they should be global AI. Now they are Embedded
+- 
 
 # Variables description
 
