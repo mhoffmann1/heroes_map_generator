@@ -13,19 +13,23 @@ class WorldGeneratorGUI(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"HoMM3 Template Generator v{__version__}")
-        self.geometry("520x840")
+        self.geometry("520x760")
         self.resizable(False, False)
+        self.treasure_density_vars = {}
+        self._init_treasure_density_vars()
 
         self._build_ui()
 
     def _build_ui(self):
         pad = {"padx": 8, "pady": 4}
 
-        frame = ttk.Frame(self)
+        root_frame = ttk.Frame(self)
+        root_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
         # -------------------------
         # Title / Header
         # -------------------------
-        title_frame = ttk.Frame(frame)
+        title_frame = ttk.Frame(root_frame)
         title_frame.pack(fill="x", pady=(0, 15))
 
         ttk.Label(
@@ -44,7 +48,37 @@ class WorldGeneratorGUI(tk.Tk):
             anchor="center",
             justify="center"
         ).pack(fill="x")
-        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # -------------------------
+        # Scrollable settings area
+        # -------------------------
+        settings_shell = ttk.Frame(root_frame)
+        settings_shell.pack(fill="both", expand=True)
+
+        canvas = tk.Canvas(settings_shell, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(settings_shell, orient="vertical", command=canvas.yview)
+        frame = ttk.Frame(canvas)
+
+        frame.bind(
+            "<Configure>",
+            lambda event: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas_window = canvas.create_window((0, 0), window=frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        def resize_settings(event):
+            canvas.itemconfigure(canvas_window, width=event.width)
+
+        canvas.bind("<Configure>", resize_settings)
+
+        def scroll_settings(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind("<MouseWheel>", scroll_settings)
 
         def label(text):
             ttk.Label(frame, text=text).pack(anchor="w", **pad)
@@ -171,16 +205,111 @@ class WorldGeneratorGUI(tk.Tk):
         ))
 
         # -------------------------
+        # Treasure density overrides
+        # -------------------------
+        ttk.Separator(frame).pack(fill="x", pady=(12, 8))
+
+        self.override_treasure_densities = tk.BooleanVar(value=False)
+        row(ttk.Checkbutton(
+            frame,
+            text="Override treasure densities",
+            variable=self.override_treasure_densities
+        ))
+
+        density_btn = ttk.Button(
+            frame,
+            text="Treasure Density Settings",
+            command=self._open_treasure_density_settings
+        )
+        density_btn.pack(fill="x", padx=20, pady=(0, 10), ipady=4)
+
+        # -------------------------
         # Generate button
         # -------------------------
-        ttk.Separator(frame).pack(fill="x", pady=(15, 10))
+        footer = ttk.Frame(root_frame)
+        footer.pack(fill="x", pady=(12, 0))
+
+        ttk.Separator(footer).pack(fill="x", pady=(0, 10))
         
         generate_btn = ttk.Button(
-            frame,
+            footer,
             text="Generate Template",
             command=self._generate
         )
-        generate_btn.pack(fill="x", padx=20, pady=(0, 20), ipady=6)
+        generate_btn.pack(fill="x", padx=20, pady=(0, 4), ipady=6)
+
+    def _init_treasure_density_vars(self):
+        defaults = {
+            "start_neutral": (9, 6, 1),
+            "treasure": (8, 8, 2),
+            "super_treasure": (8, 8, 2),
+            "fallback": (9, 6, 1),
+        }
+        for group, values in defaults.items():
+            self.treasure_density_vars[group] = [
+                tk.IntVar(value=values[0]),
+                tk.IntVar(value=values[1]),
+                tk.IntVar(value=values[2]),
+            ]
+
+    def _open_treasure_density_settings(self):
+        window = tk.Toplevel(self)
+        window.title("Treasure Density Settings")
+        window.resizable(False, False)
+        window.transient(self)
+        window.grab_set()
+
+        container = ttk.Frame(window, padding=12)
+        container.pack(fill="both", expand=True)
+
+        labels = {
+            "start_neutral": "Start / Neutral zones",
+            "treasure": "Treasure zones",
+            "super_treasure": "Super treasure zones",
+            "fallback": "Fallback / other zones",
+        }
+
+        for group, label_text in labels.items():
+            group_frame = ttk.LabelFrame(container, text=label_text)
+            group_frame.pack(fill="x", pady=(0, 10))
+
+            for idx, var in enumerate(self.treasure_density_vars[group], start=1):
+                row_frame = ttk.Frame(group_frame)
+                row_frame.pack(fill="x", padx=8, pady=4)
+
+                ttk.Label(row_frame, text=f"Tier {idx}", width=8).pack(side="left")
+
+                value_label = ttk.Label(row_frame, textvariable=var, width=3)
+                value_label.pack(side="right")
+
+                scale = ttk.Scale(
+                    row_frame,
+                    from_=1,
+                    to=15,
+                    orient="horizontal",
+                    variable=var,
+                    command=lambda value, v=var: v.set(round(float(value)))
+                )
+                scale.pack(side="left", fill="x", expand=True, padx=(8, 8))
+
+        ttk.Button(
+            container,
+            text="Done",
+            command=window.destroy
+        ).pack(fill="x", pady=(4, 0))
+
+    def _get_treasure_density_overrides(self):
+        if not self.override_treasure_densities.get():
+            return None
+
+        return {
+            group: {
+                "treasure1_density": values[0].get(),
+                "treasure2_density": values[1].get(),
+                "treasure3_density": values[2].get(),
+            }
+            for group, values in self.treasure_density_vars.items()
+        }
 
     # ----------------------------------------------------
     # Generation logic
@@ -202,7 +331,8 @@ class WorldGeneratorGUI(tk.Tk):
 
             MANUAL_OVERRIDES.update({
                 "joining_percent": joining_raw,
-                "join_only_for_money": self.join_money.get()
+                "join_only_for_money": self.join_money.get(),
+                "treasure_densities": self._get_treasure_density_overrides()
             })
 
             world = generate_world(
