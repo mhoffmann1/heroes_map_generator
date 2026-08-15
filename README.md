@@ -1,6 +1,8 @@
 # heroes_map_generator
 Generates random templates for Heroes 3 HotA map generator for a more 'random' user experience
 
+Current version: 1.0
+
 # To Do
 
 - add option to modify the number od zones in main map area - DONE
