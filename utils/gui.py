@@ -6,12 +6,13 @@ from utils.run_pipeline import run_generation_pipeline
 from config import MANUAL_OVERRIDES
 from models.map_graph import generate_world
 from models.objects import NodeType
+from version import __version__
 
 
 class WorldGeneratorGUI(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("HoMM3 Template Generator")
+        self.title(f"HoMM3 Template Generator v{__version__}")
         self.geometry("520x840")
         self.resizable(False, False)
 
@@ -29,7 +30,7 @@ class WorldGeneratorGUI(tk.Tk):
 
         ttk.Label(
             title_frame,
-            text="Heroes 3 Template Generator",
+            text=f"Heroes 3 Template Generator v{__version__}",
             font=("Segoe UI", 16, "bold"),
             anchor="center",
             justify="center"
