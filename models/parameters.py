@@ -168,7 +168,7 @@ def treasure_attributes(node):
     attrs["treasure3_low"] = jitter(t3_low)
     attrs["treasure3_high"] = jitter(t3_high)
 
-    # Apply treasure density
+    # Apply treasure density defaults
     
     if ntype == NodeType.START or ntype == NodeType.NEUTRAL:
         attrs["treasure1_density"] = 9
@@ -190,6 +190,22 @@ def treasure_attributes(node):
         attrs["treasure1_density"] = 9
         attrs["treasure2_density"] = 6
         attrs["treasure3_density"] = 1
+
+    override_group_by_type = {
+        NodeType.START: "start_neutral",
+        NodeType.NEUTRAL: "start_neutral",
+        NodeType.TREASURE: "treasure",
+        NodeType.SUPER_TREASURE: "super_treasure",
+    }
+    override_group = override_group_by_type.get(ntype, "fallback")
+    treasure_density_overrides = MANUAL_OVERRIDES.get("treasure_densities")
+
+    if treasure_density_overrides:
+        group_values = treasure_density_overrides.get(override_group)
+        if group_values:
+            attrs["treasure1_density"] = max(1, min(15, group_values["treasure1_density"]))
+            attrs["treasure2_density"] = max(1, min(15, group_values["treasure2_density"]))
+            attrs["treasure3_density"] = max(1, min(15, group_values["treasure3_density"]))
 
     # Fixed attributes
     attrs["zone_placement"] = ""     # other posible values: ground, underground
