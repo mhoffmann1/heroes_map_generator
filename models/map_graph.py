@@ -271,7 +271,7 @@ def generate_world(
     num_human_players=3,
     num_ai_players=0,
     ai_difficulty_mode='normal',
-    map_style="random",                 # "random" or "balanced"
+    map_style="random",                 # "random", "shared", or "balanced"
     main_zone_nodes=4,
     player_zone_nodes=3,
     avg_links_main=3,
@@ -283,12 +283,16 @@ def generate_world(
     """
     Generate full world:
     - Main graph by 'map_style'
-    - Human players: identical starting areas (cloned from one template)
+    - Human players: identical starting areas, or one shared area in shared mode
     - AI players: single START node cloned from the template's START node
     """
     assert 1 <= num_human_players <= 8, "Human players must be in [1, 8]"
     total_players = num_human_players + num_ai_players
     assert total_players <= 8, "Total players (human + AI) must be <= 8"
+    if map_style.lower() not in ("random", "shared", "balanced"):
+        raise ValueError(f"Unknown map style: {map_style}")
+
+    shared_start = map_style.lower() == "shared"
 
     current_id = 1
 
@@ -304,7 +308,8 @@ def generate_world(
         current_id += num_main_nodes
         
     # 2) Build human template starting area
-    num_nodes = player_zone_nodes
+    # A shared area needs a common zone in addition to the human START zones.
+    num_nodes = max(2, player_zone_nodes) if shared_start else player_zone_nodes
     template_graph = generate_subgraph(
         num_nodes, id_start=0, owner=None, start_zone=True, avg_links_per_node=avg_links_player
     )
@@ -353,10 +358,11 @@ def generate_world(
 
     # Create Player starting zones
 
-    # Clone template for each human player
+    # Clone the template for each human, or once for the shared area.
     human_graphs = []
     start_conn_points = []
-    for p in range(1, num_human_players + 1):
+    template_copies = 1 if shared_start else num_human_players
+    for p in range(1, template_copies + 1):
         nodes_map = {}
         copied_nodes = []
 
@@ -364,7 +370,7 @@ def generate_world(
             new_node = Node(
                 current_id,
                 node_type=n.node_type,
-                owner=p,
+                owner=p if n.is_start or not shared_start else None,
                 is_start=n.is_start
             )
             new_node.attributes = dict(n.attributes)
@@ -420,16 +426,45 @@ def generate_world(
 
         human_graphs.append(g)
 
+    if shared_start:
+        shared_graph = human_graphs[0]
+        shared_nodes = list(shared_graph.nodes)
+        template_start = next(n for n in template_graph.nodes if n.is_start)
+        shared_start_node = next(n for n in shared_nodes if n.is_start)
+        copied_by_template_id = dict(zip((n.id for n in template_graph.nodes), shared_nodes))
+        template_neighbors = [
+            (link.connects(template_start).id, link)
+            for link in template_start.links
+        ]
+
+        for owner in range(2, num_human_players + 1):
+            new_start = Node(current_id, node_type=NodeType.START, owner=owner, is_start=True)
+            current_id += 1
+            new_start.attributes = dict(shared_start_node.attributes)
+            new_start.attributes["player_control"] = owner
+            shared_graph.add_node(new_start)
+            start_conn_points[0].append(new_start)
+
+            # Give each human the same exits into the common local zones.
+            for neighbor_id, template_link in template_neighbors:
+                neighbor = copied_by_template_id[neighbor_id]
+                link = shared_graph.add_link(new_start, neighbor, allow_double=True)
+                link.attributes = dict(template_link.attributes)
 
     # 4) Prepare world & connect human areas to main graph
     world = Graph()
     world.merge(main_graph)
 
     # Random map post config
-    if map_style.lower() == "random":
+    if map_style.lower() in ("random", "shared"):
         # Choose connection indices ONCE from the template (can be same index twice)
         template_nodes = list(template_graph.nodes)
-        if len(template_nodes) == 1:
+        if shared_start:
+            # Main exits must leave through common zones so no human START
+            # receives a direct shortcut that the other players lack.
+            common_indices = [i for i, node in enumerate(template_nodes) if not node.is_start]
+            connection_indices = [random.choice(common_indices) for _ in range(2)]
+        elif len(template_nodes) == 1:
             connection_indices = [0, 0]
         else:
             connection_indices = [

@@ -1,6 +1,12 @@
 # heroes_map_generator
 Generates random templates for Heroes 3 HotA map generator for a more 'random' user experience
 
+Map styles:
+
+- `random`: each human has a copy of the same starting area, connected to a random main area.
+- `shared`: all humans have their own START zone in one common starting area, which connects to a random main area. Other local zones are shared. At least two local zones are generated so there is a common zone, even when the requested start-zone count is one.
+- `balanced`: each human has a copy of the same starting area and a symmetrical main-area fragment.
+
 Current version: 1.0
 
 # To Do

@@ -118,7 +118,7 @@ def ask_int_with_default(prompt, default=0, min=0, max=10):
 
 def build_world_interactive():
     # 1) MAP STYLE
-    map_style = _ask_choice("Map style", ["random", "balanced"])
+    map_style = _ask_choice("Map style", ["random", "shared", "balanced"])
 
     #  Human players (balanced requires >= 2)
     min_humans = 2 if map_style == "balanced" else 1
@@ -147,7 +147,7 @@ def build_world_interactive():
         default="normal"
     )
 
-    start_zones_per_player = ask_int_with_default("Number of start zones per player (best 1-6, 0 -> random): ", default=0, min=0, max=10)
+    start_zones_per_player = ask_int_with_default("Starting area zones (shared: one area; 0 -> random): ", default=0, min=0, max=10)
     if start_zones_per_player == 0:
         start_zones_per_player = random.randint(3, 5)
 
@@ -389,4 +389,3 @@ def visualize_graph(world):
     plt.axis("off")
     plt.tight_layout()
     plt.show()
-    
