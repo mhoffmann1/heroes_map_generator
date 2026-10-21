@@ -94,7 +94,7 @@ class WorldGeneratorGUI(tk.Tk):
         row(ttk.Combobox(
             frame,
             textvariable=self.map_style,
-            values=["random", "balanced"],
+            values=["random", "shared", "balanced"],
             state="readonly"
         ))
 
@@ -124,7 +124,7 @@ class WorldGeneratorGUI(tk.Tk):
         # -------------------------
         # Zones
         # -------------------------
-        label("Start zones per player (0 = random)")
+        label("Starting area zones (shared: one area; 0 = random)")
         self.start_zones = tk.IntVar(value=0)
         row(ttk.Spinbox(frame, from_=0, to=10, textvariable=self.start_zones))
 
